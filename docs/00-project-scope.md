@@ -2,457 +2,462 @@
 
 ## Hệ thống Quản lý Xuất khẩu KDQT (B2B Export Management System)
 
-**Trạng thái:** Draft v0.1 — cần xác nhận các mục TBD trước khi khóa phạm vi  
-**Nguồn yêu cầu:** `website_modules_analysis.md`  
-**Mục đích tài liệu:** Xác định ranh giới phạm vi dự án ở cấp hệ thống trước khi thiết kế domain, cơ sở dữ liệu, API và triển khai mã nguồn.
+**Phiên bản:** 1.0  
+**Trạng thái:** Baselined for Design  
+**Ngày cập nhật:** 2026-08-21  
+**Nguồn yêu cầu:** `website_modules_analysis.md` + các quyết định phạm vi đã được xác nhận trong phiên làm rõ yêu cầu  
+**Mục đích tài liệu:** Xác định ranh giới phạm vi dự án ở cấp hệ thống làm baseline cho các tài liệu domain, workflow, phân quyền, dữ liệu, API, kiến trúc và triển khai tiếp theo.
 
 ---
 
 ## 1. Mục tiêu dự án
 
-Xây dựng hệ thống quản lý nghiệp vụ xuất khẩu cho phòng Kinh Doanh Quốc Tế (KDQT), phục vụ nhiều nhóm người dùng với phạm vi truy cập khác nhau và liên kết xuyên suốt quy trình:
+Xây dựng hệ thống quản lý nghiệp vụ xuất khẩu B2B cho phòng Kinh Doanh Quốc Tế (KDQT), phục vụ xuyên suốt quy trình:
 
 **Khách hàng → Đơn hàng (PO/PI) → Booking → Vận hành → Giao hàng → Thanh toán**
 
-Hệ thống phải hỗ trợ 4 nhóm tài khoản/người dùng nghiệp vụ:
+Hệ thống cung cấp các khu vực truy cập theo vai trò nghiệp vụ:
 
-1. **KDQT** — nhập liệu đầu vào và vận hành nghiệp vụ chính.
-2. **Khách hàng** — xem đơn hàng, booking, tracking, thanh toán và KPI của chính khách hàng đó.
-3. **Kho** — xử lý batch, thông tin đóng hàng và trạng thái giao hàng theo phạm vi kho.
-4. **Kế toán** — xem thông tin đơn hàng, chi phí và công nợ; tải báo cáo/dữ liệu được phép.
+1. **KDQT Portal** — nhập liệu, tạo đơn hàng, booking và vận hành nghiệp vụ chính.
+2. **Customer Portal** — khách hàng theo dõi đơn hàng, booking, chứng từ, thanh toán và KPI của chính mình.
+3. **Warehouse Portal** — kho xử lý batch, lịch đóng hàng và trạng thái giao hàng trong phạm vi kho được phân công.
+4. **Finance Portal** — kế toán/tài chính xem đơn hàng, chi phí và công nợ; lọc và tải dữ liệu.
+5. **System Administration** — quản trị user, role, permission, account nghiệp vụ, master data, cấu hình và audit.
 
----
-
-## 2. Kết quả mong đợi ở cấp hệ thống
-
-Hệ thống sau khi hoàn thành phải cung cấp một nền tảng thống nhất để:
-
-- Quản lý dữ liệu khách hàng, hợp đồng, sản phẩm và giá.
-- Tạo và quản lý đơn hàng PO/PI.
-- Tạo và theo dõi booking từ đơn hàng.
-- Theo dõi quá trình vận hành đơn hàng.
-- Ghi nhận và tổng hợp chi phí.
-- Quản lý lịch giao hàng.
-- Theo dõi thanh toán và công nợ.
-- Cung cấp portal riêng cho khách hàng.
-- Cung cấp chức năng nghiệp vụ dành cho kho.
-- Cung cấp màn hình nghiệp vụ dành cho kế toán.
-- Đồng bộ trạng thái và dữ liệu cần thiết giữa các nhóm người dùng theo luồng nghiệp vụ.
-- Ghi nhận lịch sử thay đổi dữ liệu quan trọng.
-- Hỗ trợ tìm kiếm, lọc, upload và export theo phạm vi được mô tả trong tài liệu nguồn.
+Hệ thống phải bảo đảm dữ liệu và trạng thái được liên kết nhất quán giữa các portal theo đúng workflow nghiệp vụ.
 
 ---
 
-## 3. Phạm vi người dùng và portal
+## 2. Phạm vi triển khai
+
+Toàn bộ **20 module nghiệp vụ** trong tài liệu nguồn nằm trong phạm vi dự án hiện tại; không chia MVP/Phase 1/Phase 2 ở cấp Project Scope.
+
+| Khu vực | Số module nghiệp vụ | Phạm vi tổng quát |
+|---|---:|---|
+| KDQT Portal | 8 | CRUD nghiệp vụ, import, export, vận hành |
+| Customer Portal | 6 | Read-only theo dữ liệu của chính Customer + download |
+| Warehouse Portal | 3 | Read + cập nhật batch/trạng thái theo kho |
+| Finance Portal | 3 | Read-only + filter + download |
+| **Tổng** | **20** | |
+
+**System Administration** là năng lực quản trị hệ thống bổ sung, không tính vào 20 module nghiệp vụ nêu trên.
+
+Việc triển khai kỹ thuật có thể chia sprint/release nội bộ nhưng không làm thay đổi ranh giới chức năng của dự án.
+
+---
+
+## 3. Phạm vi người dùng, account và portal
 
 ### 3.1. KDQT Portal
 
 **Đối tượng:** Nhân viên phòng Kinh Doanh Quốc Tế.
 
-**Vai trò tổng quát theo tài liệu nguồn:**
+**In Scope:**
 
-- Nhập dữ liệu đầu vào.
-- Tạo và cập nhật dữ liệu nghiệp vụ.
-- Vận hành đơn hàng và booking.
-- Theo dõi chi phí, giao hàng và thanh toán.
-- Upload dữ liệu tại các module được yêu cầu.
-- Export dữ liệu/biểu mẫu tại các module được yêu cầu.
+- Quản lý khách hàng, hợp đồng, sản phẩm và giá.
+- Tạo và quản lý Order PO/PI.
+- Tạo và quản lý Booking.
+- Quản lý các công việc vận hành theo PIC/deadline/trạng thái.
+- Nhập và theo dõi chi phí.
+- Quản lý lịch giao hàng.
+- Theo dõi thanh toán và công nợ.
+- Import Excel, export/download dữ liệu và xuất chứng từ theo quyền.
 
-**Số module xác định:** 8.
-
----
+Chi tiết permission theo action/resource được xác định trong tài liệu Role & Permission Matrix.
 
 ### 3.2. Customer Portal
 
 **Đối tượng:** Khách hàng B2B.
 
-**Vai trò tổng quát:**
+**Account model:**
 
-- Xem dữ liệu đơn hàng và booking của chính khách hàng.
-- Theo dõi booking theo trạng thái.
-- Xem chứng từ được cung cấp.
-- Xem lịch thanh toán.
-- Xem KPI sản lượng/giá trị theo kỳ.
-- Download dữ liệu tại các chức năng được phép.
+- Mỗi **Customer chỉ có một account đăng nhập**.
+- Account Customer chỉ được truy cập dữ liệu của chính Customer đó.
+- Không được xem dữ liệu của Customer khác.
 
-**Ràng buộc phạm vi dữ liệu đã được xác định:**
+**In Scope:**
 
-> Một khách hàng chỉ được xem dữ liệu thuộc chính khách hàng đó, không được xem dữ liệu của khách hàng khác.
+- Order List.
+- Planning.
+- On The Way.
+- Completed.
+- Payment Schedule.
+- KPI theo tháng/quý/năm.
+- Xem/tải chứng từ và dữ liệu được phép.
 
-**Số module xác định:** 6.
-
----
+Customer Portal là read-only ở cấp nghiệp vụ hiện tại.
 
 ### 3.3. Warehouse Portal
 
-**Đối tượng:** Nhân sự kho.
+**Account model:**
 
-**Vai trò tổng quát:**
+- Mỗi **Warehouse chỉ có một account đăng nhập**.
+- Warehouse chỉ được xem và cập nhật Booking, Batch và Lịch đóng hàng được phân công cho chính Warehouse đó.
+- Không được xem dữ liệu Warehouse khác.
 
-- Xem booking/đơn hàng được phân luồng cho kho.
+**In Scope:**
+
+- Xem booking/đơn hàng được phân công.
 - Điền số batch.
 - Cập nhật trạng thái batch.
 - Cập nhật trạng thái đóng hàng.
-- Cập nhật một số thông tin phục vụ giao hàng.
-- Không hiển thị giá ở màn hình lịch đóng hàng theo yêu cầu nguồn.
-
-**Số module xác định:** 3.
-
----
+- Cập nhật dữ liệu phục vụ giao hàng theo quyền.
+- Download danh sách hàng theo SO.
+- Màn hình lịch đóng hàng không hiển thị giá.
 
 ### 3.4. Finance Portal
 
-**Đối tượng:** Nhân sự kế toán/tài chính.
+Finance Portal là **read-only**.
 
-**Vai trò tổng quát:**
+**In Scope:**
 
-- Xem thông tin đơn hàng/booking có lượng hàng và giá.
-- Xem chi phí làm hàng do KDQT phát hành.
-- Theo dõi công nợ.
-- Lọc và download dữ liệu được phép.
+- Xem thông tin đơn hàng/booking.
+- Xem lượng hàng và giá theo phạm vi được cấp.
+- Xem chi phí làm hàng.
+- Xem công nợ/thanh toán.
+- Tìm kiếm, lọc và download dữ liệu/báo cáo.
 
-**Số module xác định:** 3.
+Finance Portal **không cập nhật** thanh toán, công nợ hoặc dữ liệu nghiệp vụ trong phạm vi hiện tại.
+
+### 3.5. System Administration
+
+System Administration nằm trong phạm vi dự án và bao gồm:
+
+- User management.
+- Role management.
+- Permission management.
+- Quản lý Customer account.
+- Quản lý Warehouse account.
+- Master data management.
+- System settings.
+- Audit log viewer.
+- Import/export configuration.
+- Document template management.
+
+System Administrator **không mặc định thực hiện nghiệp vụ thay cho KDQT/Warehouse/Finance**; muốn thực hiện action nghiệp vụ phải được cấp permission tương ứng.
 
 ---
 
-## 4. Phạm vi chức năng — KDQT Portal
+## 4. Authentication và truy cập
 
-### 4.1. Module 1 — Danh sách khách hàng
+Hệ thống hỗ trợ đồng thời:
 
-**Trong phạm vi:**
+1. **Local account** do hệ thống quản lý.
+2. **SSO**.
 
-- Danh sách khách hàng.
-- Tìm kiếm và lọc.
-- Reset bộ lọc.
-- Tạo mới.
-- Sửa.
-- Upload Excel.
-- Theo dõi hợp đồng sắp hết hạn và đã hết hạn.
-- Hiển thị thị phần theo khách hàng/theo nước.
+Nhà cung cấp SSO, mapping identity, session/token model, MFA, fallback login và các chi tiết bảo mật khác được xác định trong tài liệu Authentication/Security và ADR.
+
+SSO là integration được xác nhận **In Scope** cho authentication; các tích hợp nghiệp vụ bên ngoài khác được xử lý ở Future Scope.
+
+---
+
+## 5. Phạm vi chức năng — KDQT Portal
+
+### 5.1. Module 1 — Danh sách khách hàng
+
+**In Scope:**
+
+- Danh sách khách hàng; tìm kiếm, lọc, reset.
+- Tạo mới và sửa.
+- Import Excel.
+- Theo dõi hợp đồng sắp hết hạn/đã hết hạn.
+- Thị phần theo khách hàng/theo nước.
 - Thống kê theo nhóm hàng, loại hàng, thương hiệu.
-- Quản lý các thông tin chính được mô tả trong tài liệu nguồn: mã khách hàng, tên, địa chỉ, mã số thuế, hợp đồng, trade term, payment term, currency, market, KPI, incentive và document requirements.
-
-**Ràng buộc đã xác định:**
-
+- Quản lý thông tin khách hàng, hợp đồng, trade term, payment term, currency, market, KPI, incentive và document requirements.
 - `CustomerID` là giá trị duy nhất, không trùng.
 
-**TBD:**
+Ngưỡng cảnh báo, soft delete, unique keys bổ sung và validation được thiết kế ở Business Rules/Data Dictionary.
 
-- Quy tắc xác định "sắp hết hạn".
-- Có cho phép xóa khách hàng hay chỉ ngừng hoạt động/ẩn.
-- Quy tắc duplicate ngoài `CustomerID`.
+### 5.2. Module 2 — Danh sách hàng hóa / sản phẩm và giá
 
----
+**In Scope:**
 
-### 4.2. Module 2 — Danh sách hàng hóa / sản phẩm và giá
-
-**Trong phạm vi:**
-
-- Danh sách sản phẩm.
-- Tìm kiếm, lọc, reset.
-- Tạo mới, sửa.
-- Upload Excel.
+- Danh sách sản phẩm; tìm kiếm, lọc, reset.
+- Tạo mới và sửa.
+- Import Excel.
 - Cập nhật bảng tăng giá.
-- Quản lý thông tin mã sản phẩm, barcode, HS Code, tên VN/EN, quy cách, giá, VAT, hạn sử dụng, loại Chill/Ambient, kích thước/trọng lượng/thể tích, pallet, ingredient list, nhiệt độ bảo quản và ngày hiệu lực giá.
-- Thống kê top mặt hàng bán nhiều theo nước/khách hàng.
+- Quản lý mã sản phẩm, barcode, HS Code, tên VN/EN, quy cách, giá, VAT, hạn sử dụng, Chill/Ambient, kích thước, trọng lượng, thể tích, pallet, ingredient list, nhiệt độ bảo quản và ngày hiệu lực giá.
+- Thống kê top mặt hàng theo nước/khách hàng.
 - Sản lượng theo khách hàng theo quý so với mục tiêu.
 - Danh sách hàng sắp thay đổi/sắp ra mắt và lịch áp dụng.
 
-**TBD:**
+Lịch sử giá, version ingredient list, unique rules và trạng thái sản phẩm được thiết kế ở tài liệu domain/data/business rules.
 
-- Cách lưu lịch sử thay đổi giá.
-- Cách lưu lịch sử ingredient list cập nhật theo tháng.
-- Sản phẩm có trạng thái ngừng kinh doanh hay không.
-- Quy tắc duy nhất của mã sản phẩm/barcode.
+### 5.3. Module 3 — Tạo đơn hàng PO/PI
 
----
+**In Scope:**
 
-### 4.3. Module 3 — Tạo đơn hàng PO/PI
-
-**Trong phạm vi:**
-
-- Tạo PO mới.
+- Tạo Order PO/PI.
 - Gợi ý số PO theo mẫu `TênKH/MãNước-Năm-SốTT`.
-- Lấy thông tin khách hàng từ module khách hàng.
+- Lấy thông tin Customer.
 - Nhập nhiều dòng sản phẩm.
 - Hỗ trợ số lượng, chiết khấu, phí tem, thuế, FOC và giá.
-- Tính giá theo EXW hoặc FOB/DAT và theo VND/USD.
-- In/xuất Invoice và Packing List theo biểu mẫu.
+- Tính giá theo EXW hoặc FOB/DAT và VND/USD.
+- In/xuất Invoice và Packing List theo template nghiệp vụ.
 - Ghi nhận Incentive Quarter/Year.
 - Ghi nhận Debit Note/Credit Note.
 - Quản lý loại container, phương thức vận chuyển, ETD, ETA và ghi chú kho.
 
-**TBD:**
+**Quyết định phạm vi:**
 
-- "PO/PI" là một đối tượng nghiệp vụ hay hai đối tượng riêng.
-- Quy tắc chính xác tạo số PO và xử lý cạnh tranh khi nhiều người tạo đồng thời.
-- Trạng thái/lifecycle của đơn hàng.
-- Khi nào đơn hàng được coi là "đã phát hành".
-- Một đơn hàng có thể có bao nhiêu booking.
-- Quy tắc snapshot giá/sản phẩm tại thời điểm tạo hoặc phát hành đơn hàng.
-- Quyền sửa đơn sau khi đã phát hành.
-- Quy tắc hủy/xóa đơn hàng.
+- Một **Order có thể có nhiều Booking** (`Order 1 → N Booking`).
+- Order có **lifecycle/trạng thái riêng**.
+- Order status phản ánh vòng đời/mức độ fulfillment của Order, không dùng trực tiếp Booking status làm Order status.
+- Danh sách trạng thái cụ thể, transition, snapshot data/price, quyền sửa/hủy sau phát hành và quy tắc sinh số PO được thiết kế ở Workflow/Business Rules.
 
----
+### 5.4. Module 4 — Tạo Booking
 
-### 4.4. Module 4 — Tạo Booking
+**In Scope:**
 
-**Trong phạm vi:**
+- Tạo Booking từ Order đã có.
+- Một Order có thể sinh nhiều Booking.
+- In/xuất Invoice, Packing List và Batch Information theo template nghiệp vụ.
+- Booking có lifecycle riêng.
+- Các trạng thái nguồn xác nhận: `Phát hành → Ongoing → Đang giao → Đã giao`.
+- Cho phép bổ sung **Draft**, **Hold**, **Cancelled**.
+- Khi Booking chuyển sang `Phát hành`, dữ liệu được đưa sang Lịch giao hàng và Customer Portal.
 
-- Tạo booking từ đơn hàng đã có.
-- In/xuất Invoice, Packing List và Batch Information theo biểu mẫu có sẵn.
-- Luồng trạng thái được mô tả: `Phát hành → Ongoing → Đang giao → Đã giao`.
-- Khi booking chuyển sang `Phát hành`, dữ liệu được đưa sang Lịch giao hàng và Account khách hàng.
+Tên trạng thái chuẩn hóa, transition matrix, permission và side effects được thiết kế trong `04-workflow-state-machines.md`.
 
-**TBD:**
+### 5.5. Module 5 — Vận hành đơn hàng
 
-- Booking có trạng thái Draft trước "Phát hành" hay không.
-- Có trạng thái hủy/tạm dừng hay không.
-- Quan hệ Order–Booking chính xác là 1:1 hay 1:N.
-- Điều kiện cho phép chuyển từng trạng thái.
-- Ai có quyền thực hiện từng transition.
-- Side effect đầy đủ của từng transition.
+Module Vận hành quản lý **work item/task riêng**, liên kết với Booking; không chỉ là các field trạng thái trên Booking.
 
----
+**In Scope:**
 
-### 4.5. Module 5 — Vận hành đơn hàng
-
-**Trong phạm vi:**
-
+- Một Booking có thể có nhiều work items.
+- Work item có PIC, deadline và trạng thái phục vụ theo dõi Ongoing/Completed.
 - Tìm kiếm, lọc, reset.
-- Update thông tin vận hành.
-- Chuyển trạng thái `Ongoing → Completed`.
-- Hiển thị tỷ lệ công việc theo PIC với Ongoing/Completed.
+- Cập nhật thông tin vận hành.
+- Hiển thị tỷ lệ công việc theo PIC.
 - Hiển thị tỷ lệ công việc chậm deadline theo PIC.
 
-**TBD:**
+Task entity, assignment, progress, dependency và workflow được thiết kế ở tài liệu domain/workflow sau.
 
-- Định nghĩa một "công việc" trong module vận hành.
-- Cách gán PIC.
-- Các trường dữ liệu vận hành cần cập nhật.
-- Cách xác định deadline.
-- Công thức tính tỷ lệ chậm deadline.
-- Quan hệ trạng thái Operation với trạng thái Booking.
+### 5.6. Module 6 — Nhập chi phí
 
----
-
-### 4.6. Module 6 — Nhập chi phí
-
-**Trong phạm vi:**
+**In Scope:**
 
 - Tìm kiếm, lọc, reset.
-- Update chi phí từ booking.
-- Chuyển trạng thái chi phí theo nghiệp vụ.
+- Cập nhật chi phí từ Booking.
+- Quản lý trạng thái chi phí theo nghiệp vụ.
 - Thống kê tỷ lệ % chi phí theo khách hàng.
 - Tổng chi phí hàng tháng.
-- Hỗ trợ các danh mục chi phí được liệt kê trong tài liệu nguồn.
+- Hỗ trợ các danh mục chi phí trong tài liệu nguồn.
 
-**TBD:**
+Mô hình chi phí, currency, approval rule và aggregation được thiết kế ở Domain/Business Rules.
 
-- Lifecycle/trạng thái chi phí.
-- Một booking có nhiều bản ghi chi phí theo từng loại hay một bảng tổng hợp.
-- Currency của chi phí và quy tắc quy đổi.
-- Có quy trình phê duyệt chi phí hay không.
+### 5.7. Module 7 — Lịch giao hàng
 
----
-
-### 4.7. Module 7 — Lịch giao hàng
-
-**Trong phạm vi:**
+**In Scope:**
 
 - Hiển thị lịch giao hàng theo tuần/tháng.
 - Tìm kiếm, lọc, reset.
 - Ghi chú cho nhà máy.
-- Quản lý các trường giao hàng được nêu trong tài liệu nguồn, bao gồm booking, đơn hàng, khách hàng, nước, cảng, kho, địa điểm giao, lái xe, ngày xuất kho, ETD/ETA, container, số chì, hun trùng, lấy mẫu kiểm dịch và ghi chú.
-- Khi Booking chuyển sang `Đang giao`, lịch giao hàng chuyển trạng thái `Xong` và không còn xuất hiện trong danh sách hiện hành theo mô tả nguồn.
+- Quản lý booking, order, customer, nước, cảng, warehouse, địa điểm giao, lái xe, ngày xuất kho, ETD/ETA, container, số chì, hun trùng, lấy mẫu kiểm dịch và ghi chú.
+- Khi Booking chuyển sang `Đang giao`, Lịch giao hàng chuyển trạng thái `Xong` theo yêu cầu nguồn và không còn xuất hiện trong danh sách hiện hành mặc định.
 
-**TBD:**
+History/archive và nguồn cập nhật từng trường được xác định ở tài liệu functional/data.
 
-- "Biến mất khỏi danh sách" là lọc khỏi màn hình mặc định hay chuyển sang archive/history.
-- Có cho phép người dùng xem lịch sử đã hoàn thành hay không.
-- Nguồn cập nhật các trường driver/container/seal.
+### 5.8. Module 8 — Theo dõi thanh toán
 
----
+**In Scope:**
 
-### 4.8. Module 8 — Theo dõi thanh toán
-
-**Trong phạm vi:**
-
-- Hiển thị công nợ chưa thanh toán theo khách hàng.
-- Hiển thị công nợ quá hạn theo khách hàng.
+- Hiển thị công nợ chưa thanh toán và quá hạn theo khách hàng.
 - Tìm kiếm, lọc, reset.
 - Thêm ghi chú.
-- Lấy dữ liệu liên quan từ Order và Booking.
-- Tính ngày quá hạn theo ngày hiện tại và ngày đến hạn.
-- Xác định trạng thái thanh toán theo nhóm `Quá hạn / Sắp đến hạn / Trong hạn`.
+- Lấy dữ liệu từ Order và Booking.
+- Tính ngày quá hạn và phân loại theo hạn thanh toán.
+- Hỗ trợ **partial payment / nhiều lần thanh toán**.
+- Theo dõi Amount Due, tổng đã thanh toán và Outstanding Balance.
 
-**TBD:**
-
-- Ngưỡng "sắp đến hạn".
-- Có trạng thái `Đã thanh toán`/`Thanh toán một phần` hay không.
-- Nguồn của "số tiền thực tế" và thời điểm ghi nhận.
-- Có cho phép kế toán cập nhật thanh toán hay chỉ xem.
-- Currency và xử lý nhiều lần thanh toán.
+Payment/Payment Transaction, liên kết Order/Booking, Debit/Credit Note, ngưỡng cảnh báo và công thức chi tiết được thiết kế ở Domain/Business Rules.
 
 ---
 
-## 5. Phạm vi chức năng — Customer Portal
+## 6. Phạm vi chức năng — Customer Portal
 
-### 5.1. Order List
-
-- Xem danh sách PO thuộc khách hàng hiện tại.
+### 6.1. Order List
+- Xem danh sách PO thuộc Customer hiện tại.
 - Lọc dữ liệu.
 - Download Excel.
 
-### 5.2. Planning
-
-- Xem booking dự kiến đi ở trạng thái `Phát hành`.
+### 6.2. Planning
+- Xem Booking dự kiến đi ở trạng thái `Phát hành`.
 - Xem chi tiết hàng hóa và chứng từ.
 
-### 5.3. On The Way
-
-- Xem booking ở trạng thái `Đang giao`.
+### 6.3. On The Way
+- Xem Booking ở trạng thái `Đang giao`.
 - Xem chi tiết hàng hóa và chứng từ.
 
-### 5.4. Completed
-
-- Xem booking ở trạng thái `Đã giao`.
+### 6.4. Completed
+- Xem Booking ở trạng thái `Đã giao`.
 - Xem chi tiết hàng hóa.
 
-### 5.5. Payment Schedule
+### 6.5. Payment Schedule
+- Xem Order/Booking chưa thanh toán.
+- Xem chi tiết thanh toán và số dư công nợ.
 
-- Xem booking/đơn hàng chưa thanh toán.
-- Xem chi tiết thanh toán.
-
-### 5.6. KPI
-
+### 6.6. KPI
 - Xem sản lượng và giá trị theo tháng/quý/năm so với mục tiêu.
 - Lọc theo kỳ.
 
-### 5.7. Ràng buộc phạm vi dữ liệu Customer Portal
-
-- Khách hàng chỉ được xem dữ liệu của chính mình.
-- Không được truy cập dữ liệu của khách hàng khác.
-
-**TBD cho toàn Customer Portal:**
-
-- Khách hàng có được tải chứng từ ở tất cả các trạng thái hay không.
-- Có thao tác xác nhận/feedback từ khách hàng hay hoàn toàn read-only.
-- Một customer organization có một hay nhiều tài khoản đăng nhập.
-- Cách liên kết tài khoản đăng nhập với Customer.
+### 6.7. Data Scope
+- Mỗi Customer có một account.
+- Customer chỉ đọc dữ liệu của chính mình.
+- Không được truy cập dữ liệu Customer khác.
 
 ---
 
-## 6. Phạm vi chức năng — Warehouse Portal
+## 7. Phạm vi chức năng — Warehouse Portal
 
-### 6.1. Danh sách đơn hàng kho
-
-- Xem booking kèm số SO theo kho.
-- Xem mã hàng, loại Chill/Ambient, số thùng, thể tích và tổng gross weight.
+### 7.1. Danh sách đơn hàng kho
+- Xem Booking kèm số SO theo Warehouse.
+- Xem mã hàng, Chill/Ambient, số thùng, thể tích và gross weight.
 - Download danh sách hàng theo SO.
 - Điền số batch.
-- Chuyển trạng thái trong phạm vi được phép.
+- Chuyển trạng thái theo quyền.
 
-### 6.2. Batch hàng
+### 7.2. Batch hàng
+- Xem Booking chưa có batch.
+- Nhập/cập nhật batch.
+- Theo dõi trạng thái batch.
+- Cập nhật `Hoàn thành / Chưa hoàn thành` theo workflow.
 
-- Phân biệt booking chưa có batch và đã có batch.
-- Cập nhật trạng thái batch `Hoàn thành / Chưa hoàn thành`.
-- Booking hoàn thành được chuyển sang nhóm riêng theo mô tả nguồn.
-
-### 6.3. Lịch đóng hàng kho
-
-- Xem booking được phân luồng cho từng kho.
-- Chỉ hiển thị lượng hàng; không hiển thị giá.
-- Cập nhật chuỗi trạng thái `Đã hold hàng → Đã dán tem → Đã giao hàng`.
+### 7.3. Lịch đóng hàng kho
+- Xem Booking được phân luồng cho chính Warehouse.
+- Không hiển thị giá.
+- Cập nhật `Đã hold hàng → Đã dán tem → Đã giao hàng`.
 - Khi `Đã giao hàng`, cập nhật ngược sang Lịch giao hàng chung và Booking.
 
-**TBD cho Warehouse Portal:**
-
-- Cách xác định/phân booking về từng kho.
-- Một booking có thể thuộc nhiều kho hay không.
-- Quan hệ giữa trạng thái Batch, lịch đóng hàng và Booking.
-- Kho có được sửa batch sau khi hoàn thành hay không.
-- Quyền truy cập giữa các kho: một kho có được thấy booking của kho khác hay không.
+### 7.4. Data Scope
+- Mỗi Warehouse có một account.
+- Chỉ xem/cập nhật Booking, Batch và Lịch đóng hàng thuộc Warehouse đó.
+- Không được xem dữ liệu Warehouse khác.
 
 ---
 
-## 7. Phạm vi chức năng — Finance Portal
+## 8. Phạm vi chức năng — Finance Portal
 
-### 7.1. Thông tin đơn hàng
+Finance Portal là **read-only**.
 
-- Xem booking phân luồng theo miền.
+### 8.1. Thông tin đơn hàng
+- Xem Booking/Order theo phạm vi được cấp.
 - Xem lượng hàng và giá.
-- Lọc dữ liệu.
-- Download.
+- Lọc và download.
 
-### 7.2. Chi phí làm hàng
-
+### 8.2. Chi phí làm hàng
 - Xem chi phí do KDQT phát hành.
-- Lọc dữ liệu.
-- Download bảng chi phí.
+- Lọc và download bảng chi phí.
 
-### 7.3. Theo dõi công nợ
+### 8.3. Theo dõi công nợ
+- Xem dữ liệu công nợ/thanh toán.
+- Xem partial payments và outstanding balance khi có.
+- Lọc và download theo khách hàng.
 
-- Xem dữ liệu theo dõi công nợ tương ứng module thanh toán của KDQT.
-- Lọc dữ liệu.
-- Download theo khách hàng.
-
-**TBD cho Finance Portal:**
-
-- Finance là hoàn toàn read-only hay được cập nhật thông tin thanh toán/công nợ.
-- Quy tắc "phân luồng theo miền".
-- Phạm vi khách hàng/booking mà từng tài khoản finance được phép xem.
+Finance không có quyền cập nhật payment/debt trong phạm vi hiện tại.
 
 ---
 
-## 8. Năng lực dùng chung trong phạm vi
+## 9. Import, export và chứng từ
 
-Các yêu cầu dùng chung được xác định trong tài liệu nguồn:
+### 9.1. Excel Import
 
-### 8.1. Tìm kiếm và lọc
+`Upload Excel` là **import dữ liệu vào database**, không chỉ upload file để lưu trữ.
 
-- Các module có yêu cầu phải hỗ trợ tìm kiếm/lọc theo nhiều tiêu chí.
-- Chi tiết tiêu chí cụ thể sẽ được xác định trong tài liệu functional requirements/API sau.
+**In Scope:**
 
-### 8.2. CRUD và cập nhật dữ liệu
+- Import tạo mới dữ liệu.
+- Import cập nhật dữ liệu dựa trên khóa nghiệp vụ.
+- Áp dụng validation và chống duplicate.
+- Hỗ trợ **partial success**.
+- Dòng hợp lệ được import.
+- Dòng lỗi bị bỏ qua và được trả về trong báo cáo lỗi chi tiết.
 
-- KDQT có quyền nghiệp vụ rộng nhất theo mô tả tổng hợp.
-- Các portal khác có quyền giới hạn theo vai trò.
-- Chi tiết Create/Read/Update/Delete theo từng resource **chưa được xem là đã khóa** cho đến khi có permission matrix.
+Business key, transaction strategy, dry-run/preview, retry và format error report được xác định ở tài liệu Import/Export và Data Dictionary.
 
-### 8.3. Chống trùng lặp dữ liệu
+### 9.2. Export/Download
 
-- Hệ thống phải có cơ chế ngăn dữ liệu duplicate.
-- Các khóa unique và quy tắc duplicate cụ thể ngoài `CustomerID` cần được xác định ở tài liệu business rules/data dictionary.
+Hệ thống hỗ trợ export/download theo các module đã nêu trong tài liệu nguồn, bao gồm Excel và các biểu mẫu nghiệp vụ.
 
-### 8.4. Quản lý trạng thái liên portal
+### 9.3. Document Templates
 
-- Trạng thái nghiệp vụ phải có khả năng tác động dữ liệu hiển thị/xử lý ở portal khác.
-- Các transition cụ thể sẽ được khóa trong tài liệu workflow/state machines.
+- Invoice, Packing List, Batch Information và chứng từ khác được sinh theo **template chính thức do nghiệp vụ cung cấp**.
+- Template có thể được cập nhật/thay thế mà không làm thay đổi logic nghiệp vụ cốt lõi.
+- System Administration có chức năng quản lý template.
 
-### 8.5. Audit Log
-
-- Hệ thống phải ghi nhận lịch sử ai sửa và sửa gì.
-- Mức độ chi tiết, retention, dữ liệu before/after và phạm vi entity cần audit chưa được xác định trong nguồn.
-
-### 8.6. Phân quyền
-
-- Hệ thống có nhiều nhóm người dùng với quyền khác nhau.
-- Customer bắt buộc bị giới hạn theo phạm vi dữ liệu của chính khách hàng.
-- Permission chi tiết cần tài liệu riêng.
-
-### 8.7. Excel / biểu mẫu
-
-- Có nhu cầu upload Excel ở một số module.
-- Có nhu cầu export/download dữ liệu.
-- Có nhu cầu xuất các biểu mẫu Invoice, Packing List, Batch Information.
-- Format/template chính xác cần được xác nhận.
+Versioning template, mapping field, rendering engine và storage implementation được xác định ở tài liệu chuyên biệt.
 
 ---
 
-## 9. Luồng nghiệp vụ xuyên hệ thống trong phạm vi
+## 10. Notifications
 
-Luồng nghiệp vụ cấp cao được xác định như sau:
+Hệ thống có **in-app notification** trong phạm vi hiện tại.
+
+Các nhóm thông báo tối thiểu:
+
+- Hợp đồng sắp hết hạn.
+- Hợp đồng hết hạn.
+- Thanh toán sắp đến hạn.
+- Thanh toán quá hạn.
+- Work item vận hành quá deadline.
+- Các sự kiện nghiệp vụ khác được xác định trong Functional Requirements.
+
+**Email, SMS, push notification và các kênh bên ngoài hệ thống không nằm trong phạm vi hiện tại** và thuộc Future Scope.
+
+---
+
+## 11. Ngôn ngữ và thiết bị truy cập
+
+### 11.1. Ngôn ngữ
+
+Hệ thống hỗ trợ giao diện **song ngữ Việt/Anh**.
+
+- UI có Tiếng Việt và Tiếng Anh.
+- Dữ liệu nghiệp vụ có trường song ngữ tiếp tục lưu/hiển thị riêng VN/EN.
+- i18n, fallback language và resource management được quyết định ở frontend/architecture.
+
+### 11.2. Thiết bị
+
+Website phải responsive và hỗ trợ đầy đủ trên:
+
+- Desktop.
+- Tablet.
+- Mobile browser.
+
+**Native iOS/Android application không nằm trong phạm vi hiện tại.**
+
+---
+
+## 12. Năng lực dùng chung trong phạm vi
+
+### 12.1. Tìm kiếm, lọc và phân trang
+Các module có nhu cầu phải hỗ trợ tìm kiếm, lọc và hiển thị dữ liệu phù hợp với quy mô sử dụng. Filter/sort/pagination cụ thể được xác định ở Functional Requirements/API Design.
+
+### 12.2. CRUD và command nghiệp vụ
+- KDQT có phạm vi nghiệp vụ rộng nhất nhưng vẫn chịu kiểm soát permission.
+- Customer và Finance read-only theo scope đã xác nhận.
+- Warehouse được update trong phạm vi dữ liệu của chính Warehouse.
+- State transition quan trọng sẽ được mô hình hóa thành command nghiệp vụ, không chỉ sửa tự do field `Status`.
+
+### 12.3. Chống trùng lặp
+Hệ thống phải ngăn dữ liệu duplicate bằng validation, business key và database constraints phù hợp.
+
+### 12.4. Audit Log
+Hệ thống phải ghi lại lịch sử ai thay đổi dữ liệu gì. System Administration có Audit Log Viewer.
+
+### 12.5. Authorization và Data Scope
+- Customer chỉ thấy dữ liệu của chính Customer.
+- Warehouse chỉ thấy/cập nhật dữ liệu của chính Warehouse được phân công.
+- Finance read-only.
+- System Admin không mặc định có quyền nghiệp vụ nếu chưa được cấp permission tương ứng.
+
+### 12.6. Dashboard/KPI/Reporting
+Các dashboard, KPI, thống kê và tổng hợp xuất hiện trong 20 module đều nằm trong phạm vi dự án. Formula, data source, filter và aggregation được đặc tả ở Reporting/Dashboard Specification.
+
+---
+
+## 13. Luồng nghiệp vụ xuyên hệ thống
 
 ```text
 Customer + Product
@@ -460,6 +465,7 @@ Customer + Product
         ▼
      Order PO/PI
         │
+        │ 1:N
         ▼
       Booking
         │
@@ -468,7 +474,7 @@ Customer + Product
         ├──────────────► Warehouse Portal
         │
         ▼
-     Operation
+ Operation Work Items
         │
         ▼
        Cost
@@ -477,226 +483,178 @@ Customer + Product
  Delivery Schedule
         │
         ▼
- Payment Tracking
+ Payment / Receivables
         │
+        ├──────────────► Customer Portal
         └──────────────► Finance Portal
 ```
 
-Các liên kết trạng thái đã được nguồn mô tả rõ:
+Các liên kết nghiệp vụ đã xác nhận ở cấp scope:
 
-1. Booking `Phát hành` → dữ liệu sang Lịch giao hàng và Customer Portal.
-2. Booking `Đang giao` → Customer Portal hiển thị trong `On The Way`; Lịch giao hàng chuyển `Xong` theo mô tả nguồn.
-3. Booking `Đã giao` → Customer Portal hiển thị trong `Completed`.
-4. Warehouse `Đã giao hàng` → cập nhật ngược sang Lịch giao hàng và Booking.
-5. Dữ liệu Order/Booking được dùng để hình thành thông tin thanh toán/công nợ.
+1. `Order 1 → N Booking`.
+2. Order có lifecycle riêng.
+3. Booking có lifecycle riêng; ngoài chuỗi nghiệp vụ nguồn còn cho phép Draft/Hold/Cancelled.
+4. Booking `Phát hành` → dữ liệu xuất hiện ở Lịch giao hàng và Customer Portal.
+5. Booking `Đang giao` → Customer Portal `On The Way`; Lịch giao hàng chuyển `Xong` theo yêu cầu nguồn.
+6. Booking `Đã giao` → Customer Portal `Completed`.
+7. Warehouse `Đã giao hàng` → cập nhật ngược sang Lịch giao hàng và Booking.
+8. Booking có thể có nhiều Operation Work Items.
+9. Payment hỗ trợ nhiều lần thanh toán và outstanding balance.
 
-Chi tiết transactional boundary, thứ tự cập nhật và xử lý lỗi **không nằm trong phạm vi tài liệu Project Scope** và sẽ được xác định ở tài liệu workflow/architecture sau.
-
----
-
-## 10. Phạm vi kỹ thuật đã xác định
-
-### 10.1. Backend
-
-- **.NET 10**.
-- **ASP.NET Core Web API**.
-
-### 10.2. Kiến trúc, database và hạ tầng
-
-Chưa được khóa trong tài liệu nguồn và **không được giả định trong phiên bản này**.
-
-Các quyết định còn mở:
-
-- Database engine và nơi lưu trữ database.
-- Hosting/deployment.
-- Authentication mechanism.
-- File storage.
-- Frontend technology.
-- Cơ chế background processing.
-- Cache.
-- Hệ thống notification.
-- Tích hợp hệ thống ngoài.
+Transactional boundary, transition chi tiết, consistency model và side effects được thiết kế ở Workflow/Architecture.
 
 ---
 
-## 11. Ngoài phạm vi đã xác nhận / chưa được phép coi là In Scope
+## 14. External Integrations
 
-Tài liệu nguồn **không xác nhận** các chức năng sau. Vì vậy phiên bản Project Scope này không tự đưa chúng vào phạm vi triển khai:
+### 14.1. Trong phạm vi hiện tại
+- SSO phục vụ authentication.
+
+### 14.2. Future Scope / Out of Scope hiện tại
+
+Các tích hợp nghiệp vụ bên ngoài có thể được bổ sung trong tương lai nhưng **không nằm trong phạm vi hiện tại**, bao gồm:
 
 - ERP/SAP integration.
 - CRM integration.
+- Hệ thống kho bên ngoài.
+- Hệ thống kế toán bên ngoài.
+- E-invoice integration.
+- Shipping line/carrier API.
+- Payment gateway/online payment.
+- Email/SMS/push provider.
+- Các dịch vụ bên thứ ba khác chưa được yêu cầu cụ thể.
+
+Khi có yêu cầu tích hợp mới, cần bổ sung scope và integration contract tương ứng.
+
+---
+
+## 15. Ngoài phạm vi hiện tại
+
+- Native mobile application.
+- Offline mode.
+- ERP/SAP/CRM/accounting/warehouse external integrations, trừ SSO authentication.
 - Shipping line/carrier API integration.
 - Payment gateway/online payment.
 - E-invoice integration.
-- Email/SMS/Zalo/Teams notification.
-- SSO.
-- MFA.
-- Mobile native application.
-- Offline mode.
-- Multi-company/multi-tenant operation ngoài yêu cầu phân tách dữ liệu từng khách hàng.
-- Approval workflow ngoài các state transition đã mô tả.
-- Document signing/e-signature.
+- Email/SMS/push notification.
 - OCR.
-- BI/Data Warehouse riêng.
-- Public API cho hệ thống bên thứ ba.
+- Electronic signature/document signing nếu chưa có change request bổ sung.
+- BI/Data Warehouse riêng biệt ngoài dashboard/reporting của ứng dụng.
+- Public API cho hệ thống bên thứ ba nếu chưa có change request bổ sung.
 
-> Các mục trên không được coi là "bị loại vĩnh viễn". Chúng chỉ chưa được xác nhận bởi nguồn hiện tại và cần quyết định riêng nếu có yêu cầu.
-
----
-
-## 12. Các ràng buộc và nguyên tắc phạm vi đã xác định
-
-1. Customer Portal phải bảo đảm cách ly dữ liệu giữa các khách hàng.
-2. Warehouse Portal không hiển thị giá tại màn hình lịch đóng hàng theo mô tả nguồn.
-3. Hệ thống phải có audit lịch sử chỉnh sửa.
-4. Hệ thống phải chống dữ liệu duplicate.
-5. Hệ thống phải hỗ trợ state propagation giữa các nhóm người dùng theo workflow nghiệp vụ.
-6. Hệ thống phải hỗ trợ import/export ở các module đã được yêu cầu.
-7. Các biểu mẫu Invoice, Packing List và Batch Information phải dựa trên form/template nghiệp vụ được cung cấp; template cụ thể hiện chưa được xác nhận trong nguồn.
+Các hạng mục này thuộc Future Scope và phải qua change control nếu bổ sung.
 
 ---
 
-## 13. Các nội dung không được quyết định trong tài liệu Project Scope
+## 16. Phạm vi kỹ thuật đã xác định
 
-Các nội dung sau sẽ được xử lý ở tài liệu chuyên biệt tiếp theo:
+### 16.1. Backend
+- **.NET 10**.
+- **ASP.NET Core Web API**.
 
-- Domain entity và aggregate boundaries.
-- Database schema/ERD.
-- API endpoint cụ thể.
-- DTO/request/response model.
-- Permission chi tiết.
-- Business rule chi tiết.
-- State machine đầy đủ.
-- Validation rule.
+### 16.2. Những quyết định kỹ thuật không thuộc Project Scope
+
+Các nội dung sau được quyết định trong Architecture/ADR, không phải điều kiện để xác định ranh giới nghiệp vụ:
+
+- Database engine và database topology.
+- Frontend framework cụ thể.
+- Hosting/deployment topology.
+- File storage implementation.
+- Cache.
+- Background processing/job engine.
+- Observability stack.
+- CI/CD.
+- SSO provider cụ thể.
+
+---
+
+## 17. Tài liệu thiết kế tiếp theo
+
+Project Scope này không quyết định chi tiết các nội dung sau; chúng được xử lý ở tài liệu chuyên biệt:
+
+- `01-domain-glossary.md`
+- `02-functional-requirements.md`
+- `03-business-rules.md`
+- `04-workflow-state-machines.md`
+- `05-role-permission-matrix.md`
+- `06-domain-model.md`
+- `07-data-dictionary.md`
+- `08-system-architecture.md`
+- `09-api-design.md`
+- `10-api-endpoints.md`
+- Validation rules.
 - Error handling.
 - Audit schema.
-- Import/export format chi tiết.
-- File storage implementation.
+- Import/export specification.
+- File management.
 - Background jobs/events.
-- Caching.
-- Logging/observability.
+- Notification rules.
+- Concurrency/idempotency.
+- Dashboard/reporting formulas.
 - Testing strategy.
-- Deployment topology.
+- Deployment/operations.
 
 ---
 
-## 14. Tiêu chí hoàn tất phạm vi (Scope Completion Criteria)
+## 18. Scope Decision Baseline
 
-Tài liệu `00-project-scope.md` chỉ được chuyển từ **Draft** sang **Approved/Baselined** khi:
-
-- [ ] 4 nhóm người dùng/portal được xác nhận.
-- [ ] Danh sách 20 module được xác nhận.
-- [ ] In Scope của từng module được xác nhận.
-- [ ] Các điểm TBD có ảnh hưởng đến ranh giới hệ thống được trả lời.
-- [ ] Các hệ thống tích hợp ngoài (nếu có) được xác định.
-- [ ] Phạm vi authentication/user management được xác định.
-- [ ] Phạm vi import/export và template được xác định.
-- [ ] Phạm vi ngôn ngữ và thiết bị truy cập được xác định.
-- [ ] Các chức năng bị loại khỏi Phase 1 được xác nhận rõ.
-
----
-
-## 15. Các câu hỏi cần làm rõ trước khi khóa Project Scope
-
-### Nhóm A — Ranh giới hệ thống
-
-1. **Hệ thống có tích hợp với hệ thống khác không?**  
-   Ví dụ: SAP/ERP, CRM, hệ thống kho, kế toán, e-invoice, hãng vận chuyển, email/SMS hoặc dịch vụ bên thứ ba. Nếu có, cần liệt kê hệ thống và loại dữ liệu trao đổi.
-
-2. **Phạm vi Phase 1 có đúng là toàn bộ 20 module trong tài liệu nguồn không?**  
-   Hay cần chia giai đoạn/MVP?
-
-3. **Có cần một khu vực Admin riêng để quản lý user, role, permission, master data và cấu hình hệ thống không?**  
-   Tài liệu nguồn mới mô tả 4 nhóm account nghiệp vụ nhưng chưa mô tả System Administrator.
-
-### Nhóm B — Account và phân quyền
-
-4. **Cơ chế đăng nhập mong muốn là gì?**  
-   Email/password nội bộ, Microsoft/Google SSO, hoặc cơ chế khác?
-
-5. **Một khách hàng có thể có nhiều tài khoản đăng nhập không?**
-
-6. **Một kho có thể có nhiều tài khoản không, và tài khoản kho chỉ được xem dữ liệu của kho mình hay có thể xem nhiều kho?**
-
-7. **Finance có hoàn toàn read-only không?**  
-   Hay Finance được nhập/cập nhật thanh toán, công nợ hoặc xác nhận số tiền thực tế?
-
-### Nhóm C — Workflow nghiệp vụ ảnh hưởng trực tiếp đến scope
-
-8. **Một Order có thể tạo nhiều Booking không?**
-
-9. **Order có lifecycle/trạng thái riêng không?**  
-   Ví dụ Draft → Issued → Partially Booked → Completed → Cancelled.
-
-10. **Booking có các trạng thái Draft/Cancelled/Hold ngoài `Phát hành → Ongoing → Đang giao → Đã giao` không?**
-
-11. **Module Vận hành đơn hàng quản lý các task/công việc độc lập hay chỉ là một tập trường trạng thái của Booking?**
-
-12. **Thanh toán có hỗ trợ trả nhiều lần/partial payment không?**
-
-### Nhóm D — Import, export và chứng từ
-
-13. **Các template IV/Invoice, PL/Packing List và Batch Information đã có file mẫu chính thức chưa?**
-
-14. **Upload Excel cần "import tạo/cập nhật dữ liệu" hay chỉ upload file để lưu trữ?**
-
-15. **Khi import có dòng lỗi, yêu cầu là all-or-nothing hay cho phép import các dòng hợp lệ và trả report các dòng lỗi?**
-
-### Nhóm E — Ngôn ngữ và thiết bị
-
-16. **Giao diện cần tiếng Việt, tiếng Anh hay song ngữ?**
-
-17. **Website có bắt buộc responsive để sử dụng đầy đủ trên điện thoại/tablet không?**
-
-18. **Có yêu cầu mobile app native không?**
-
-### Nhóm F — Hạ tầng/triển khai
-
-19. **Database dự kiến sử dụng là gì?**
-
-20. **Triển khai trên server nội bộ, private cloud hay public cloud?**
-
-21. **File/chứng từ cần lưu ở đâu?**  
-   Local server, NAS/file server, object storage/cloud, hoặc chưa quyết định?
+| ID | Quyết định | Kết quả |
+|---|---|---|
+| SCOPE-01 | Phạm vi triển khai | Toàn bộ 20 module nghiệp vụ In Scope |
+| SCOPE-02 | System Administration | In Scope |
+| SCOPE-03 | External business integrations | Future Scope, không thuộc phạm vi hiện tại |
+| SCOPE-04 | Authentication | Local account + SSO |
+| SCOPE-05 | Customer account model | Mỗi Customer một account |
+| SCOPE-06 | Warehouse account model | Mỗi Warehouse một account |
+| SCOPE-07 | Finance | Read-only |
+| SCOPE-08 | Order → Booking | 1:N |
+| SCOPE-09 | Order lifecycle | Có lifecycle riêng; chi tiết thiết kế sau |
+| SCOPE-10 | Booking lifecycle | Có Draft/Hold/Cancelled ngoài các trạng thái nguồn; chi tiết thiết kế sau |
+| SCOPE-11 | Order Operations | Quản lý work items/tasks riêng gắn với Booking |
+| SCOPE-12 | Payment | Hỗ trợ partial payment / nhiều lần thanh toán |
+| SCOPE-13 | Excel Upload | Import tạo mới/cập nhật dữ liệu vào database |
+| SCOPE-14 | Import errors | Partial success + báo cáo lỗi |
+| SCOPE-15 | Document templates | Template chính thức do nghiệp vụ cung cấp, có thể cập nhật/thay thế |
+| SCOPE-16 | UI language | Song ngữ Việt/Anh |
+| SCOPE-17 | Devices | Responsive desktop/tablet/mobile browser; không native app |
+| SCOPE-18 | Warehouse data scope | Chỉ dữ liệu của chính Warehouse được phân công |
+| SCOPE-19 | System Admin scope | Users/Roles/Permissions/Accounts/Master Data/Settings/Audit/Import-Export/Templates |
+| SCOPE-20 | Notifications | In-app notifications In Scope; external channels Future Scope |
 
 ---
 
-## 16. Trạng thái quyết định
+## 19. Tiêu chí baseline của Project Scope
 
-| Hạng mục | Trạng thái |
-|---|---|
-| Mục tiêu hệ thống | Xác định |
-| 4 nhóm account nghiệp vụ | Xác định |
-| 20 module | Xác định |
-| Luồng nghiệp vụ cấp cao | Xác định |
-| Backend .NET 10 + ASP.NET Core Web API | Xác định |
-| Database | TBD |
-| Authentication | TBD |
-| System Admin scope | TBD |
-| Frontend stack | TBD |
-| Hosting/deployment | TBD |
-| File storage | TBD |
-| External integrations | TBD |
-| Excel/document templates | TBD |
-| UI language | TBD |
-| Mobile/responsive scope | TBD |
-| Detailed workflow/state machines | TBD — tài liệu tiếp theo |
-| Detailed permissions/data scope | TBD — tài liệu tiếp theo |
+- [x] 4 portal nghiệp vụ được xác nhận.
+- [x] Toàn bộ 20 module nghiệp vụ được xác nhận In Scope.
+- [x] System Administration được xác nhận In Scope.
+- [x] Account model của Customer/Warehouse được xác nhận.
+- [x] Finance read-only được xác nhận.
+- [x] Quan hệ Order 1:N Booking được xác nhận.
+- [x] Nguyên tắc lifecycle Order và Booking được xác nhận.
+- [x] Operations work-item model được xác nhận ở cấp scope.
+- [x] Partial payment được xác nhận.
+- [x] Import/export và document template direction được xác nhận.
+- [x] Authentication direction được xác nhận.
+- [x] External integration boundary được xác nhận.
+- [x] UI language và responsive scope được xác nhận.
+- [x] In-app notification scope được xác nhận.
+
+Các chi tiết còn lại thuộc thiết kế và **không còn là câu hỏi chặn Project Scope**.
 
 ---
 
-## 17. Phê duyệt tài liệu
+## 20. Phê duyệt và quản lý thay đổi
 
-| Vai trò | Người xác nhận | Trạng thái | Ngày |
-|---|---|---|---|
-| Business Owner / KDQT | TBD | Pending | TBD |
-| Product/Project Owner | TBD | Pending | TBD |
-| Technical Lead | TBD | Pending | TBD |
+Project Scope này là baseline cho giai đoạn thiết kế. Các thay đổi làm tăng/giảm phạm vi chức năng sau baseline phải được ghi nhận như scope change/change request và cập nhật version tài liệu.
+
+Phê duyệt tổ chức chính thức, nếu quy trình dự án yêu cầu, được ghi nhận riêng theo vai trò Business Owner, Product/Project Owner và Technical Lead.
 
 ---
 
-## 18. Lịch sử phiên bản
+## 21. Lịch sử phiên bản
 
 | Version | Date | Description |
 |---|---|---|
-| 0.1 | 2026-08-21 | Khởi tạo Project Scope từ `website_modules_analysis.md`; chỉ ghi nhận nội dung có căn cứ, đánh dấu TBD cho các yêu cầu chưa rõ. |
+| 0.1 | 2026-08-21 | Khởi tạo Project Scope từ `website_modules_analysis.md`; ghi nhận các điểm chưa rõ dưới dạng TBD/open questions. |
+| 1.0 | 2026-08-21 | Baseline Project Scope sau phiên làm rõ; tích hợp SCOPE-01..SCOPE-20 và loại bỏ danh sách câu hỏi mở khỏi tài liệu baseline. |
