@@ -2,32 +2,33 @@
 
 ## Hệ thống Quản lý Xuất khẩu KDQT (B2B Export Management System)
 
-**Phiên bản:** 0.2  
-**Trạng thái:** Draft for Re-review  
+**Phiên bản:** 0.3  
+**Trạng thái:** Draft for Final Re-review  
 **Ngày cập nhật:** 2026-08-21  
 **Baseline:** `docs/00-project-scope.md`  
 **Canonical vocabulary:** `docs/01-domain-glossary.md`  
-**Quy trình làm rõ:** `docs/HANDOFF.md`  
-**Nguồn nghiệp vụ:** `website_modules_analysis.md`, PPTX yêu cầu nghiệp vụ gốc, workbook Excel nghiệp vụ gốc, `phan_tich_chi_tiet_modules.md` và các quyết định được xác nhận trong phiên làm rõ Domain Model.
+**Quy trình:** `docs/HANDOFF.md`
+
+**Nguồn nghiệp vụ:** workbook XLSX gốc, PPTX yêu cầu gốc, `website_modules_analysis.md`, `phan_tich_chi_tiet_modules.md` và các quyết định đã được xác nhận trong phiên làm rõ Domain Model.
+
+> Khi tài liệu phân tích thứ cấp mở rộng logic mà XLSX/PPTX chưa khóa, Domain Model không coi phần mở rộng đó là requirement đã xác nhận.
 
 ---
 
 # 1. Mục đích và phạm vi
 
-Tài liệu này xác định Domain Model ở mức nghiệp vụ cho hệ thống quản lý xuất khẩu KDQT.
-
-Tài liệu khóa:
+Tài liệu này khóa Domain Model ở mức nghiệp vụ:
 
 - domain ownership boundaries;
 - Aggregate Root, Entity, Value Object và master/reference concepts;
-- các relationship/cardinality đủ căn cứ;
+- relationship/cardinality đủ căn cứ;
 - business identifiers;
 - transaction snapshot boundaries;
-- persisted facts so với derived data;
+- authoritative persisted facts so với derived data;
 - cross-domain references;
-- các quyết định cố ý deferred sang Business Rules, Workflow, Data Dictionary, Documents hoặc Architecture.
+- các quyết định intentionally deferred sang Business Rules, Workflow, Data Dictionary, Documents hoặc Architecture.
 
-Tài liệu này **không phải database schema** và không khóa SQL table/column, EF mapping, API path, DTO, exact transition matrix hoặc công thức chưa được business/source xác nhận.
+Tài liệu này **không phải database schema** và không khóa SQL/EF/API/DTO hoặc công thức/state transition chưa đủ bằng chứng.
 
 ---
 
@@ -35,9 +36,7 @@ Tài liệu này **không phải database schema** và không khóa SQL table/co
 
 ## 2.1. Canonical vocabulary trước implementation naming
 
-Các term trong `01-domain-glossary.md` là canonical terms. Alias từ workbook/PPTX phải map về canonical concept, không tạo entity song song chỉ vì tên nguồn khác nhau.
-
-Ví dụ:
+Alias từ workbook/PPTX phải map về canonical term trong `01-domain-glossary.md`, không tạo entity song song chỉ vì source dùng tên khác.
 
 ```text
 OrderNumber             // internal business identifier
@@ -59,8 +58,6 @@ Credential, password, token, SSO mapping và authorization implementation không
 
 ## 2.3. Transaction facts phải ổn định theo thời điểm giao dịch
 
-Master data có thể thay đổi, nhưng transaction lịch sử phải giữ dữ liệu thực tế đã áp dụng.
-
 ```text
 Customer defaults
       ↓
@@ -73,40 +70,41 @@ Order.CommercialSnapshot
 ProductPrice
       ↓ selected
 OrderLine.PricingSnapshot
-      ↓ allocated/snapshotted for booked quantity
+      ↓ booked snapshot
 BookingLine.PricingSnapshot
 ```
 
-## 2.4. Một business fact chỉ có một authoritative owner
+Master data có thể thay đổi nhưng transaction lịch sử không đọc động lại master hiện tại.
 
-Không duplicate cùng một fact chỉ vì workbook hiển thị nó ở nhiều sheet.
+## 2.4. Một business fact có một authoritative owner
 
-- Product identity thuộc OrderLine/Product relation, không duplicate `ProductId` trên BookingLine.
-- ETD/ETA/ATD/ATA thuộc Logistics.
-- document metadata thuộc Documents.
+- Product identity authoritative ở `OrderLine.ProductId`, không duplicate `ProductId` trên BookingLine.
+- ETD/ATD/ETA/ATA thuộc Logistics.
+- document issue/number/file metadata thuộc Documents.
 - DueDate thuộc Receivable.
-- Booking actual financial amount thuộc Booking financial snapshot.
-- Operations chỉ tham chiếu/hiển thị facts thuộc domain khác, không trở thành source-of-truth thứ hai.
+- Order expected/issued transaction amount thuộc `Order.FinancialSnapshot`.
+- Booking actual fulfilled transaction amount thuộc `Booking.FinancialSnapshot`.
+- Operations chỉ tham chiếu/hiển thị facts thuộc domain khác.
 
-Một snapshot có chủ đích để bảo toàn lịch sử **không được coi là duplication lỗi**, nhưng phải ghi rõ snapshot boundary và source của snapshot.
+Snapshot có chủ đích để bảo toàn lịch sử không được coi là duplication lỗi nếu source và snapshot boundary được ghi rõ.
 
 ## 2.5. Derived data không mặc định persisted
 
 Ví dụ:
 
-- Contract ExpiringSoon;
+- Contract `ExpiringSoon`;
 - Current/Upcoming ProductPrice;
-- WorkItem IsOverdue;
+- WorkItem `IsOverdue`;
 - OutstandingBalance;
 - dashboard/KPI aggregation.
 
 ## 2.6. Không khóa rule chưa đủ bằng chứng
 
-Exact state transitions, price-period overlap, FOC formula, incentive formula, Debit/Credit accounting effect, cost approval, receivable generation và payment warning threshold thuộc tài liệu downstream.
+Exact state transitions, price overlap, FOC formula, Incentive formula, Debit/Credit accounting effect, cost approval, Receivable generation/reconciliation và payment warning threshold thuộc downstream artifacts.
 
 ---
 
-# 3. Domain Areas / Ownership Boundaries
+# 3. Domain Areas
 
 ```text
 1. Customer & Commercial
@@ -146,8 +144,8 @@ graph LR
 
 ```text
 Customer
-├── Id                     // technical identifier
-├── CustomerCode           // global unique business identifier
+├── Id
+├── CustomerCode                 // global unique business identifier
 ├── CountryId
 ├── MarketId
 ├── RegionId
@@ -155,7 +153,7 @@ Customer
 └── DefaultDocumentRequirements
 ```
 
-Source `CustomerID` được chuẩn hóa thành `CustomerCode`.
+Source `CustomerID` được normalize thành `CustomerCode`.
 
 ### Invariants
 
@@ -164,7 +162,7 @@ CustomerCode is globally unique
 Country != Market != Region
 ```
 
-`CommercialDefaults` có thể chứa Incoterm, PaymentTerm, Currency, LoadingPort/Origin, Destination và commercial defaults source-supported khác. Exact BankFee semantics thuộc Business Rules/Data Dictionary.
+`CommercialDefaults` có thể chứa Incoterm, PaymentTerm, Currency, LoadingPort/Origin, Destination và commercial defaults source-supported khác. BankFee semantics deferred.
 
 `DefaultDocumentRequirements` là collection thuộc Customer aggregate, không là Aggregate Root riêng.
 
@@ -172,9 +170,7 @@ Country != Market != Region
 
 ```text
 Customer 1 ─── 0..N Contract
-```
 
-```text
 Contract
 ├── Id
 ├── CustomerId
@@ -185,19 +181,17 @@ Contract
 └── DocumentRequirementOverrides
 ```
 
-### Invariants
-
 ```text
 UNIQUE(CustomerId, ContractNumber)
 ```
 
-Contract có thể override commercial defaults của Customer. Order snapshot terms thực tế sau khi resolve defaults + overrides.
+Contract có thể override Customer commercial defaults. Order snapshot resolved terms thực tế.
 
-`Effective`, `Expired`, `ExpiringSoon` là temporal/derived state từ dates ở mức hiện tại. Các lifecycle state độc lập như Cancelled/Terminated/Suspended chỉ thêm nếu business xác nhận.
+`Effective`, `Expired`, `ExpiringSoon` hiện là temporal/derived semantics từ dates. Persisted lifecycle state khác chỉ thêm khi business xác nhận.
 
-Contract effective-period overlap được biểu diễn được nhưng exact validity rule deferred.
+Contract-period overlap được biểu diễn được nhưng validity rule deferred.
 
-Document requirement override dùng semantics inherit + Add/Remove từng `DocumentType`.
+Document requirement override dùng inherit + `Add/Remove(DocumentType)`.
 
 ## 4.3. KpiTarget — Aggregate Root
 
@@ -212,16 +206,14 @@ KpiTarget
 └── TargetValue
 ```
 
-`Metric` tối thiểu biểu diễn `Quantity` và `SalesValue` theo business clarification. Source workbook ban đầu xác nhận target sản lượng; exact unit/currency/formula deferred.
+`Metric` tối thiểu biểu diễn `Quantity` và `SalesValue` theo business clarification. Workbook gốc trực tiếp xác nhận Quantity target; unit/currency/formula deferred.
 
 ## 4.4. IncentiveProgram — Aggregate Root
 
 ```text
 Customer 1 ─── N IncentiveProgram
 IncentiveProgram 1 ─── N IncentiveTier
-```
 
-```text
 IncentiveProgram
 ├── CustomerId
 ├── Year
@@ -264,9 +256,9 @@ Region
 ```text
 Product
 ├── Id
-├── ProductionCode          // global unique
+├── ProductionCode                // global unique
 ├── ProductClassId
-├── StorageCategory         // Chill | Ambient
+├── StorageCategory               // Chill | Ambient
 ├── IsTailorMade
 ├── ProductBarcode?
 ├── BlockBarcode?
@@ -276,15 +268,13 @@ Product
 └── AvailableFrom / PlannedLaunchDate?
 ```
 
-### Invariants / semantics
-
 ```text
 ProductionCode is globally unique
 ProductClass != StorageCategory
 Barcode != canonical Product identifier
 ```
 
-`ProductGroup` và `Brand` chưa thành canonical entities vì source reporting có nhắc nhưng taxonomy/field ownership chưa đủ rõ.
+`ProductGroup` và `Brand` chưa thành canonical entities vì reporting có nhắc nhưng taxonomy/ownership chưa đủ rõ.
 
 Barcode format/check-digit/uniqueness deferred.
 
@@ -308,11 +298,13 @@ ProductPrice
 
 Source combined `FOB/DAT` được import/mapping về canonical FOB và DAT, không tạo enum `FOB_DAT`.
 
-Price effective-period overlap rule deferred.
+Price overlap rule deferred.
+
+> Không thêm `PriceBasis`/EA-vs-Carton vào canonical ProductPrice chỉ từ tài liệu phân tích thứ cấp khi XLSX/PPTX gốc chưa khóa requirement đó.
 
 ## 5.3. VAT
 
-`Product.VatRate` là current master fact. `OrderLine.PricingSnapshot.VatRate` và `BookingLine.PricingSnapshot.VatRate` giữ giá trị thực tế áp dụng cho transaction snapshot tương ứng. Exact VND/USD calculation deferred.
+`Product.VatRate` là current master fact. `OrderLine.PricingSnapshot.VatRate` và `BookingLine.PricingSnapshot.VatRate` giữ giá trị áp dụng ở từng transaction snapshot. Exact VND/USD calculation deferred.
 
 ## 5.4. ProductIngredientVersion — Aggregate Root
 
@@ -361,12 +353,13 @@ Order 1 ─── N Booking
 ```text
 Order
 ├── Id
-├── OrderNumber             // global unique
+├── OrderNumber                   // global unique
 ├── CustomerPoNumber?
-├── CustomerId              // required
-├── ContractId?             // optional
+├── CustomerId                    // required
+├── ContractId?                   // optional
 ├── ResponsibleUserId?
 ├── CommercialSnapshot
+├── FinancialSnapshot
 ├── Status
 ├── OrderLines
 └── AppliedIncentives
@@ -378,9 +371,7 @@ Order lifecycle tồn tại nhưng exact normalized states/transitions deferred 
 
 ## 6.2. CommercialSnapshot — Value Object
 
-Order giữ resolved commercial transaction facts, tối thiểu gồm các giá trị cần ổn định như customer display identity, Incoterm, PaymentTerm, Currency, Origin/Loading terms và Destination terms.
-
-Thay đổi Customer/Contract sau này không tự thay đổi Order cũ.
+Order giữ resolved commercial transaction facts cần ổn định: customer display identity, Incoterm, PaymentTerm, Currency, Origin/Loading terms, Destination terms và các source-supported commercial facts khác.
 
 ## 6.3. OrderLine — child Entity
 
@@ -392,55 +383,69 @@ OrderLine
 ├── UnitOfMeasure
 ├── PricingSnapshot
 └── FulfillmentStatus
-```
 
-```text
 PricingSnapshot
 ├── UnitPrice
 ├── VatRate
 ├── Discount / price-adjustment inputs
-├── LabelFee / other source-supported commercial inputs
+├── LabelFee / other source-supported inputs
 └── IsFoc
 ```
 
-`ProductId` authoritative ở OrderLine cho Product của transaction line.
+`ProductId` authoritative ở OrderLine.
 
 FOC được biểu diễn rõ bằng `IsFoc`; exact effect lên quantity/value/KPI deferred.
 
-OrderLine có fulfillment/completion concept vì source cho phép đánh dấu mã hàng hoàn thành để không tiếp tục đưa sang Booking mới.
+OrderLine có fulfillment concept vì source cho phép đánh dấu mã hàng hoàn thành để không tiếp tục đưa vào Booking mới.
 
-## 6.4. AppliedIncentive — transaction fact, không phải IncentiveProgram
+## 6.4. AppliedIncentive — transaction fact
 
-`IncentiveProgram` là policy/master theo Customer + period. `AppliedIncentive` là giá trị incentive thực tế được áp dụng vào một transaction.
+`IncentiveProgram` là Customer policy. `AppliedIncentive` là incentive thực tế áp dụng cho một transaction.
 
 ```text
 AppliedIncentive
-├── PeriodType             // Quarter | Year hoặc canonical equivalent
+├── PeriodType
 ├── Amount
-├── IncentiveProgramId?    // chỉ khi business rule xác định program cụ thể
-└── IncentiveTierRef?      // optional, exact linkage deferred
+├── IncentiveProgramId?
+└── IncentiveTierRef?
 ```
 
-Source workbook cho phép nhập Incentive Quarter/Year trong Order với semantics điều chỉnh giá trị. `AppliedIncentive` **không đồng nhất** với `FinancialAdjustment` Debit/Credit Note.
+`AppliedIncentive` không đồng nhất với `FinancialAdjustment` Debit/Credit Note. Exact sign/selection/allocation deferred.
 
-Exact sign, selection, threshold và allocation rules deferred.
+## 6.5. Order FinancialSnapshot — Value Object
 
-## 6.5. FinancialAdjustment — Aggregate Root
+Workbook gốc có `FINAL AMOUNT` ở **TẠO ĐƠN HÀNG** và payment tracking có `Số tiền cần thanh toán` lấy từ **Đơn hàng**.
 
-`FinancialAdjustment` dùng cho Debit/Credit Note và adjustment tài chính khác được business xác nhận; không dùng để đại diện chính sách `IncentiveProgram`.
+Vì vậy Order phải bảo toàn financial result của Order riêng với actual amount của Booking.
 
 ```text
-Order 1 ─── N FinancialAdjustment
-Booking 0..1 ─── N FinancialAdjustment   // optional transaction scope
-Receivable 0..1 ─── N FinancialAdjustment
+Order.FinancialSnapshot
+├── Currency
+├── SubtotalBeforeVat
+├── VatTotal
+├── AppliedIncentiveTotal
+├── FinancialAdjustmentTotal
+└── FinalAmount
 ```
+
+`Order.FinancialSnapshot.FinalAmount` là persisted **expected/issued Order amount** tại mốc nghiệp vụ phù hợp.
+
+Nó trả lời semantic:
+
+> Giá trị tài chính của Order đã phát hành/được dùng làm số tiền cần thanh toán theo nguồn là bao nhiêu?
+
+Exact formula, rounding, FOC, incentive và Debit/Credit effect deferred.
+
+## 6.6. FinancialAdjustment — Aggregate Root
+
+`FinancialAdjustment` dùng cho Debit/Credit Note và adjustment tài chính khác được business xác nhận.
 
 ```text
 FinancialAdjustment
-├── OrderId                // required canonical transaction parent
-├── BookingId?             // nếu adjustment áp dụng riêng cho Booking
-├── ReceivableId?          // nếu đã apply vào khoản phải thu cụ thể
-├── Type                   // DebitNote | CreditNote | Other
+├── OrderId                    // required canonical transaction parent
+├── BookingId?                 // optional booking-specific scope
+├── ReceivableId?              // optional applied receivable scope
+├── Type                       // DebitNote | CreditNote | Other
 ├── Amount
 ├── Currency?
 └── metadata
@@ -453,7 +458,7 @@ Debit Note  = subtractive / negative
 Credit Note = additive / positive
 ```
 
-Accounting perspective/effect chính xác deferred.
+Đây là source convention; accounting perspective/effect chính xác deferred.
 
 ---
 
@@ -465,9 +470,7 @@ Booking là shipping/fulfillment unit chính; không tạo `Shipment` entity son
 
 ```text
 Order 1 ─── N Booking
-```
 
-```text
 Booking
 ├── BookingCode                 // global unique
 ├── CarrierBookingNumber?
@@ -483,18 +486,12 @@ Booking
 
 `SO` tiếp tục là external reference/working interpretation `Shipping Order`; không tạo ShippingOrder aggregate riêng khi semantics/lifecycle chưa được source xác nhận.
 
-Exact Booking state machine deferred.
-
 ## 7.2. BookingLine — child Entity
-
-BookingLine là quantity của một `OrderLine` được đưa vào Booking.
 
 ```text
 OrderLine 1 ─── N BookingLine
 Booking   1 ─── N BookingLine
-```
 
-```text
 BookingLine
 ├── OrderLineId                 // required
 ├── BookedQuantity
@@ -502,48 +499,51 @@ BookingLine
 └── FulfillmentStatus
 ```
 
-**Không persist `ProductId` riêng trên BookingLine.** Product canonical được trace qua `OrderLineId → OrderLine.ProductId`.
+**Không persist `ProductId` riêng trên BookingLine.** Product trace qua `OrderLineId → OrderLine.ProductId`.
 
-`BookingLine.PricingSnapshot` là snapshot có chủ đích từ OrderLine pricing cho quantity thực tế của Booking; nó tồn tại để Booking có thể tái tạo financial facts/history mà không phụ thuộc việc Order bị thay đổi/amend sau này.
+`BookingLine.PricingSnapshot` là intentional snapshot từ OrderLine pricing cho booked quantity để Booking transaction history không phụ thuộc Order bị amend sau đó.
 
-Exact fields có thể gồm UnitPrice, VatRate, IsFoc và các line-level commercial inputs cần để tái tạo booked amount; exact field list thuộc Data Dictionary.
+Exact fields thuộc Data Dictionary.
 
 ## 7.3. Booking FinancialSnapshot — Value Object
 
-Workbook gốc xác nhận Booking có các financial fields như giá chưa VAT, VAT, tổng giá, FOC, Incentive Quarter/Year, Debit Note, Credit Note và `FINAL AMOUNT`. Sheet Theo dõi thanh toán lấy `Số tiền thực tế` từ Booking sau khi giao.
+Workbook gốc có financial fields ở Booking và payment tracking có `Số tiền thực tế` lấy từ **Booking sau khi đã giao**.
 
-Vì vậy **Booking là authoritative owner của actual transaction amount ở mức Booking**.
+Vì vậy:
 
 ```text
 Booking.FinancialSnapshot
 ├── Currency
 ├── SubtotalBeforeVat
 ├── VatTotal
-├── LineTotal / GrossTotal
 ├── AppliedIncentiveTotal
 ├── FinancialAdjustmentTotal
 └── FinalAmount
 ```
 
-`FinalAmount` là persisted Booking transaction fact khi Booking đạt mốc nghiệp vụ khiến amount được dùng cho thanh toán/receivable. Trước mốc đó có thể được recalculated từ component facts theo Business Rules.
+`Booking.FinancialSnapshot.FinalAmount` là persisted **actual Booking amount** tại financialization/finalization milestone phù hợp.
 
-Sources của snapshot:
+Nó trả lời semantic:
+
+> Giá trị thực tế của phần Order đã fulfillment qua Booking này là bao nhiêu?
+
+Sources có thể gồm:
 
 ```text
 BookingLine.PricingSnapshot
 + Booking.AppliedIncentives
-+ FinancialAdjustment records scoped to Booking
++ Booking-scoped FinancialAdjustment
         ↓
 Booking.FinancialSnapshot.FinalAmount
 ```
 
-Exact formula, rounding, FOC, VAT, incentive và Debit/Credit sign rules deferred.
+Exact formula, rounding, FOC, VAT, Incentive và Debit/Credit sign rules deferred.
 
-### Order → Booking adjustment allocation
+### Order → Booking allocation
 
-Khi Order có applied incentive/financial adjustment nhưng được split thành nhiều Booking, Domain Model **không tự giả định** allocation formula.
+Khi một Order split thành nhiều Booking, exact allocation của Order-level incentive/adjustment **không được Domain Model tự giả định**.
 
-Business Rules phải quyết định một trong các cơ chế như explicit allocation hoặc booking-specific application. Sau khi allocation được chốt, Booking financial snapshot chỉ giữ **amount thực tế đã áp dụng cho Booking đó**.
+Business Rules phải xác định allocation/application semantics. Booking chỉ giữ amount thực tế đã áp dụng sau khi rule được thực thi.
 
 ## 7.4. Warehouse assignment
 
@@ -564,7 +564,7 @@ BatchAllocation
 └── Quantity
 ```
 
-Một BookingLine có thể dùng nhiều Batch và một Batch có thể phục vụ nhiều BookingLine.
+Một BookingLine có thể dùng nhiều Batch; một Batch có thể phục vụ nhiều BookingLine.
 
 ## 7.6. TransportEquipment — child Entity
 
@@ -575,8 +575,6 @@ Booking
     ├── ContainerNumber?
     └── SealNumber?
 ```
-
-Phân biệt:
 
 ```text
 TransportMode      = Sea | Air | Road | Rail
@@ -590,22 +588,18 @@ EquipmentType      = 20DC | 40DC | 40HC | 20RF | 40RF | ...
 
 `Carrier` là canonical entity cho đơn vị trực tiếp vận chuyển. Shipping Line là Sea Carrier. Forwarder chưa là core canonical entity bắt buộc.
 
-Booking → Carrier required/optional rule deferred theo workflow.
+Booking → Carrier required/optional rule deferred.
 
 ## 7.8. Logistics locations
-
-Canonical concepts:
 
 ```text
 OriginLocation
 DestinationLocation
 ```
 
-POL/POD là aliases theo Sea context. Dùng `LogisticsLocation` reference đơn giản; hierarchy deferred.
+POL/POD là Sea aliases. Dùng `LogisticsLocation` reference đơn giản; hierarchy deferred.
 
 ## 7.9. Logistics time facts
-
-Phân biệt:
 
 ```text
 PlannedLoadingDate
@@ -624,7 +618,7 @@ Không đồng nhất ETD với Loading Date dù source cũ có wording nhập n
 Booking 1 ─── 0..1 LoadingSchedule
 ```
 
-Sở hữu warehouse loading progress/facts. Exact workflow `Đã hold hàng → Đã dán tem → Đã giao hàng` deferred sang Workflow.
+Sở hữu warehouse loading progress/facts. Exact warehouse workflow deferred.
 
 ## 7.11. DeliverySchedule — Aggregate Root
 
@@ -643,7 +637,7 @@ DriverInfo
 └── Phone
 ```
 
-Không tạo Driver master entity khi source chưa có module quản lý Driver độc lập.
+Chưa tạo Driver master entity.
 
 ---
 
@@ -663,7 +657,7 @@ WorkItem
 └── completion metadata
 ```
 
-Ở version hiện tại WorkItem có một Primary PIC. Multiple assignee/collaborator chưa thêm khi source chưa yêu cầu.
+Version hiện tại có một Primary PIC. Multiple assignee chưa thêm khi source chưa yêu cầu.
 
 Source xác nhận tối thiểu Ongoing/Completed; exact lifecycle deferred.
 
@@ -688,23 +682,23 @@ OperationalMilestone
 └── milestone-specific metadata
 ```
 
-`MilestoneType` là configurable/reference concept, không hard-code toàn bộ workbook thành enum.
+`MilestoneType` configurable/reference; không hard-code toàn bộ workbook thành enum.
 
-Không duplicate domain-owned facts:
+Không duplicate owner facts:
 
 - ETD/ATD/ETA/ATA → Logistics;
 - container/seal/driver → Logistics;
 - document number/issue/received dates → Documents khi là document facts.
 
-OperationalMilestone chỉ giữ process milestones thực sự như checking batch, production/raw material milestones, cut-off, docs sent và các process events sau khi source mapping được xác nhận.
+OperationalMilestone giữ process milestones thực sự như checking batch, production/raw material, cut-off, docs sent và các process events sau khi source mapping được xác nhận.
 
 ---
 
 # 9. Documents
 
-## 9.1. DocumentType — controlled reference data
+## 9.1. DocumentType — controlled reference
 
-Source/glossary hiện có các types như Purchase Order, Quotation, Proforma Invoice, Commercial Invoice, Packing List, Batch Information, Bill of Lading, Certificate of Origin, Customs Declaration và Health Certificate.
+Source/glossary hiện có Purchase Order, Quotation, Proforma Invoice, Commercial Invoice, Packing List, Batch Information, Bill of Lading, Certificate of Origin, Customs Declaration và Health Certificate.
 
 ## 9.2. DocumentRequirement ownership
 
@@ -717,7 +711,7 @@ Không tạo Aggregate Root `DocumentRequirement` độc lập.
 
 ## 9.3. DocumentObligation — Aggregate Root
 
-Booking snapshot danh sách chứng từ thực tế phải chuẩn bị để Customer/Contract requirement thay đổi sau này không làm đổi transaction lịch sử.
+Booking snapshot danh sách chứng từ thực tế phải chuẩn bị để Customer/Contract requirements thay đổi sau này không đổi transaction lịch sử.
 
 ```text
 Booking 1 ─── N DocumentObligation
@@ -731,7 +725,7 @@ DocumentObligation
 
 ## 9.4. BusinessDocument — Aggregate Root
 
-Glossary cho phép chứng từ có direct business subject là Customer, Order hoặc Booking tùy loại/ngữ cảnh. Domain Model giữ explicit references thay vì generic `OwnerType/OwnerId`.
+Glossary cho phép direct business subject là Customer, Order hoặc Booking tùy loại/ngữ cảnh.
 
 ```text
 BusinessDocument
@@ -750,9 +744,9 @@ BusinessDocument
 AT LEAST ONE OF (CustomerId, OrderId, BookingId) MUST be present
 ```
 
-Không populate `CustomerId` chỉ để duplicate Customer có thể derive từ Order/Booking. `CustomerId` được dùng khi Customer chính là direct subject của document.
+Không populate `CustomerId` chỉ để duplicate Customer derive được từ Order/Booking. `CustomerId` chỉ dùng khi Customer chính là direct subject.
 
-Nếu `OrderId`/`BookingId` có giá trị, consistency với Customer của transaction phải được bảo đảm bởi Business Rules/Data Dictionary constraints.
+Nếu OrderId/BookingId có giá trị, consistency với transaction Customer phải được bảo đảm.
 
 ### Source type
 
@@ -761,12 +755,12 @@ SystemGenerated
 ExternalUploaded
 ```
 
-System-generated candidates theo source:
+System-generation candidates:
 
 - Order context: Purchase Order, Proforma Invoice, Quotation;
 - Booking context: Commercial Invoice, Packing List, Batch Information.
 
-External/uploaded/tracked candidates chủ yếu: BL, TKHQ, CO, HC và external certificates.
+External/uploaded/tracked chủ yếu: BL, TKHQ, CO, HC và external certificates.
 
 ## 9.5. Health Certificate subtype
 
@@ -784,7 +778,7 @@ DocumentTemplate
 └── DocumentTemplateVersion(s)
 ```
 
-Generated BusinessDocument revision giữ reference đến exact template version đã dùng.
+Generated BusinessDocument revision giữ reference exact TemplateVersion đã dùng.
 
 ## 9.7. BusinessDocument revisions
 
@@ -793,7 +787,7 @@ BusinessDocument
 └── DocumentRevision(s)
 ```
 
-Không overwrite historical file/revision. Exact approval/version status workflow deferred.
+Không overwrite historical file/revision. Exact approval/version workflow deferred.
 
 ---
 
@@ -824,22 +818,16 @@ Exact unique/business rules deferred.
 
 ## 10.3. BookingCostStatement — Aggregate Root
 
-Source xác nhận chi phí được nhập **theo từng Booking**, nhưng không xác nhận nhiều cost statements độc lập cho cùng Booking.
-
-Do đó model chọn cardinality đơn giản/source-supported:
+Source xác nhận chi phí được nhập theo Booking nhưng không xác nhận nhiều cost statements độc lập cho cùng Booking.
 
 ```text
 Booking 1 ─── 0..1 BookingCostStatement
-```
 
-```text
 BookingCostStatement
 ├── BookingId
 ├── Status
 └── CostItems
-```
 
-```text
 CostItem
 ├── CostTypeId
 ├── VendorId?
@@ -852,16 +840,14 @@ CostItem
 └── Note?
 ```
 
-Nếu sau này cần revision/version history, versioning nằm **bên trong hoặc quanh cùng cost aggregate**, không mặc định tạo nhiều statements cùng cấp cho một Booking.
-
-Exact calculations, publishing và approval workflow deferred.
+Nếu sau này cần revision/version history, versioning nằm quanh cùng aggregate; không mặc định tạo nhiều statements cùng cấp cho một Booking.
 
 ## 10.4. Receivable — Aggregate Root
 
 ```text
 Receivable
 ├── OrderId                  // required
-├── BookingId?               // optional booking-scoped receivable
+├── BookingId?               // optional scope/reference
 ├── AmountDue
 ├── Currency
 ├── DueDate
@@ -870,22 +856,47 @@ Receivable
 
 ```text
 Order 1 ─── N Receivable
-Booking 1 ─── 0..N Receivable
+Booking 0..1 ─── N Receivable
 ```
 
-Exact generation/cardinality rule vẫn deferred vì source hiển thị cả Order/Booking trong payment tracking.
+Exact Receivable generation/cardinality theo Order/Booking vẫn deferred theo HANDOFF/glossary.
 
-### Booking-specific amount source
+### Preserve three distinct financial semantics
 
-Nếu Receivable scope theo Booking, `AmountDue` phải được initialized/snapshotted từ authoritative `Booking.FinancialSnapshot.FinalAmount` theo Business Rules tại mốc phát sinh receivable.
+```text
+Order.FinancialSnapshot.FinalAmount
+        = expected / issued Order amount
+        = source semantic “Số tiền cần thanh toán”
 
-Điều này phản ánh source: `Số tiền thực tế` lấy từ Booking sau khi giao.
+Booking.FinancialSnapshot.FinalAmount
+        = actual fulfilled Booking amount
+        = source semantic “Số tiền thực tế”
 
-Nếu Receivable ở Order scope, exact relation giữa Order final amount và các Booking actual amounts phải được Business Rules xác định, không tự cộng/trừ ngầm trong Domain Model.
+Receivable.AmountDue
+        = amount legally/operationally due under the applied receivable rule
+```
+
+**Domain Model không quy định một trong hai FinalAmount tự động thay thế `Receivable.AmountDue`.**
+
+Exact mapping/reconciliation giữa:
+
+```text
+Order expected amount
+Booking actual amount(s)
+FinancialAdjustment(s)
+AppliedIncentive(s)
+PaymentTerm / due-date event
+        ↓
+Receivable.AmountDue
+```
+
+thuộc Business Rules.
+
+Điều này bảo toàn đúng hai source facts riêng biệt thay vì gộp chúng thành một amount.
 
 ### DueDate
 
-`DueDate` source-of-truth nằm trên Receivable. `PaymentTerm` là rule/input để tính ngày cụ thể.
+`DueDate` source-of-truth trên Receivable. PaymentTerm là rule/input để tính concrete date.
 
 ## 10.5. PaymentTransaction — child Entity
 
@@ -899,7 +910,7 @@ PaymentTransaction
 └── reference/metadata
 ```
 
-Hỗ trợ partial payment/multiple payments. Bank reconciliation model chưa thêm khi source chưa yêu cầu.
+Hỗ trợ partial/multiple payments. Chưa tạo Bank/Reconciliation aggregate khi source chưa yêu cầu.
 
 ## 10.6. Derived receivable data
 
@@ -918,7 +929,7 @@ Exact refund, FX, adjustment và overdue-warning rules deferred.
 
 ## 11.1. User — Identity Aggregate Root
 
-Authentication details nằm trong Identity boundary, không nằm trong business aggregates.
+Authentication details nằm trong Identity boundary, không trong business aggregates.
 
 ## 11.2. CustomerAccount
 
@@ -940,7 +951,7 @@ Theo Project Scope, mỗi Warehouse có đúng một Warehouse Account.
 
 ## 11.4. KDQT / Finance / System Admin
 
-Không tạo business entities riêng `KdqtAccount`, `FinanceAccount`, `AdminAccount`. Đây là User + Role/Permission/Data Scope.
+Không tạo `KdqtAccount`, `FinanceAccount`, `AdminAccount` business entities riêng. Đây là User + Role/Permission/Data Scope.
 
 Business domain chỉ reference UserId khi cần, ví dụ PIC/responsible user/audit actor.
 
@@ -966,23 +977,23 @@ Audit Log là cross-cutting capability và không thay thế domain history/vers
 | Customer & Commercial | IncentiveProgram | Child IncentiveTier |
 | Product & Pricing | Product | SKU/current specification |
 | Product & Pricing | ProductPrice | Effective-dated price history |
-| Product & Pricing | ProductIngredientVersion | Effective-dated ingredient history |
+| Product & Pricing | ProductIngredientVersion | Ingredient history |
 | Product & Pricing | Batch | Product traceability lot |
-| Order | Order | Child OrderLine, AppliedIncentive |
-| Order/Finance | FinancialAdjustment | Debit/Credit/other financial adjustment; optional Booking/Receivable scope |
-| Booking & Logistics | Booking | BookingLines/equipment/financial snapshot/applied incentives |
+| Order | Order | OrderLine + CommercialSnapshot + FinancialSnapshot + AppliedIncentive |
+| Order/Finance | FinancialAdjustment | Debit/Credit/other; optional Booking/Receivable scope |
+| Booking & Logistics | Booking | BookingLine/equipment/FinancialSnapshot/AppliedIncentive |
 | Booking & Logistics | LoadingSchedule | Warehouse loading workflow ownership |
 | Booking & Logistics | DeliverySchedule | Delivery/logistics schedule ownership |
 | Operations | WorkItem | PIC/deadline/status |
 | Operations | OperationalMilestone | Process milestone tracking |
 | Documents | DocumentObligation | Required docs snapshot by Booking |
-| Documents | BusinessDocument | Customer/Order/Booking subject + revisions |
+| Documents | BusinessDocument | Customer/Order/Booking direct subject + revisions |
 | Documents | DocumentTemplate | Child template versions |
-| Finance | BookingCostStatement | Max one current aggregate per Booking; child CostItems |
+| Finance | BookingCostStatement | Max one aggregate per Booking in current model |
 | Finance | Receivable | Child PaymentTransactions |
 | Identity | User | Identity/auth boundary |
 
-Important child entities/value objects:
+Important child Entities / Value Objects:
 
 | Owner | Child / Value Object |
 |---|---|
@@ -990,7 +1001,7 @@ Important child entities/value objects:
 | Contract | ContractTerms, ContractDocumentRequirementOverride |
 | IncentiveProgram | IncentiveTier |
 | Product | CurrentSpecification |
-| Order | CommercialSnapshot, OrderLine, AppliedIncentive |
+| Order | CommercialSnapshot, FinancialSnapshot, OrderLine, AppliedIncentive |
 | OrderLine | ProductSnapshot, PricingSnapshot |
 | Booking | BookingLine, TransportEquipment, FinancialSnapshot, AppliedIncentive |
 | BookingLine | PricingSnapshot, BatchAllocation |
@@ -1046,7 +1057,7 @@ erDiagram
     RECEIVABLE o|--o{ FINANCIAL_ADJUSTMENT : may_apply
 ```
 
-Mermaid chỉ thể hiện conceptual relationships. Optionality/physical FK details thuộc Data Dictionary, ngoại trừ các cardinality/invariants đã chốt trong tài liệu này.
+Mermaid chỉ thể hiện conceptual relationships. Các exact optionality/cardinality chưa được source khóa vẫn thuộc downstream rules.
 
 ---
 
@@ -1059,15 +1070,17 @@ Mermaid chỉ thể hiện conceptual relationships. Optionality/physical FK det
 | ProductPrice amount/effective period | Persisted |
 | Current/Upcoming ProductPrice | Derived |
 | Order.CommercialSnapshot | Persisted transaction fact |
-| OrderLine Product/Pricing snapshot | Persisted transaction facts |
+| OrderLine Product/PricingSnapshot | Persisted transaction facts |
+| Order.FinancialSnapshot.FinalAmount | Persisted expected/issued Order financial fact |
 | BookingLine PricingSnapshot | Persisted Booking transaction snapshot |
-| Booking FinancialSnapshot.FinalAmount | Persisted actual Booking transaction fact at financialization milestone |
+| Booking.FinancialSnapshot.FinalAmount | Persisted actual Booking financial fact |
+| Receivable.AmountDue / DueDate | Persisted receivable facts |
+| Mapping Order/Booking amounts → AmountDue | Business Rule, not implied by Domain Model |
 | Booked/Remaining quantity | Derived unless downstream optimization requires materialization |
 | WorkItem Deadline/Status | Persisted |
 | WorkItem IsOverdue | Derived |
 | Delivery ETD/ETA/ATD/ATA | Persisted logistics facts |
 | Customer Portal Planning/OnTheWay/Completed grouping | Derived from Booking lifecycle |
-| Receivable AmountDue/DueDate | Persisted |
 | PaymentTransaction | Persisted |
 | AmountPaid / OutstandingBalance | Derived |
 | Overdue days/status | Derived |
@@ -1086,16 +1099,16 @@ Mermaid chỉ thể hiện conceptual relationships. Optionality/physical FK det
 7. Order luôn có Customer; Contract optional.
 8. Order.Contract nếu có phải thuộc cùng Customer.
 9. Customer có `0..N` Contract.
-10. Order có `1..N` OrderLine khi đạt trạng thái nghiệp vụ yêu cầu line; draft rule deferred.
+10. Order có `1..N` OrderLine khi đạt trạng thái nghiệp vụ yêu cầu line; draft validation deferred.
 11. Order `1:N` Booking.
-12. BookingLine bắt buộc trace về OrderLine và **không sở hữu duplicate ProductId**.
+12. BookingLine bắt buộc trace về OrderLine và không sở hữu duplicate ProductId.
 13. Một Booking có một primary Warehouse.
 14. BatchAllocation nối BookingLine với Batch và mang quantity.
-15. Booking actual financial amount source-of-truth là `Booking.FinancialSnapshot.FinalAmount` tại mốc financialization.
-16. Booking-scoped Receivable AmountDue phải source/snapshot từ Booking FinalAmount theo Business Rules.
+15. `Order.FinancialSnapshot.FinalAmount` và `Booking.FinancialSnapshot.FinalAmount` là hai business facts riêng, không được đồng nhất.
+16. Domain Model không ép `Receivable.AmountDue` lấy từ Order FinalAmount hoặc Booking FinalAmount; exact mapping thuộc Business Rules.
 17. BusinessDocument phải có ít nhất một direct subject trong Customer/Order/Booking.
-18. `CustomerId` trên BusinessDocument không dùng để duplicate Customer derive được từ Order/Booking nếu Customer không phải direct subject.
-19. Một Booking có tối đa một `BookingCostStatement` aggregate ở model hiện tại.
+18. CustomerId trên BusinessDocument không dùng để duplicate Customer derive từ Order/Booking nếu Customer không phải direct subject.
+19. Một Booking có tối đa một BookingCostStatement aggregate trong model hiện tại.
 20. `IncentiveProgram` là policy; `AppliedIncentive` là transaction fact; hai concept không đồng nhất.
 21. CustomerAccount binding 1:1 với Customer theo Project Scope.
 22. WarehouseAccount binding 1:1 với Warehouse theo Project Scope.
@@ -1119,8 +1132,10 @@ Mermaid chỉ thể hiện conceptual relationships. Optionality/physical FK det
 - Incentive threshold/reward/sign/selection.
 - AppliedIncentive allocation từ Order sang nhiều Booking.
 - Debit/Credit accounting perspective/effect.
-- FinancialAdjustment allocation/scope rules khi Order split nhiều Booking.
-- Booking FinalAmount formula/rounding/financialization milestone.
+- FinancialAdjustment allocation/scope khi Order split nhiều Booking.
+- Order FinalAmount formula/rounding/finalization milestone.
+- Booking FinalAmount formula/rounding/finalization milestone.
+- **mapping/reconciliation giữa Order expected amount, Booking actual amount(s) và Receivable.AmountDue.**
 - Payment DueDate calculation.
 - Receivable generation/cardinality theo Order/Booking.
 - partial payment/refund/FX rules.
@@ -1133,7 +1148,7 @@ Mermaid chỉ thể hiện conceptual relationships. Optionality/physical FK det
 - OrderLine fulfillment transitions;
 - BookingLine fulfillment transitions;
 - Warehouse loading workflow;
-- Booking financialization/finalization transition;
+- Order/Booking financialization milestones;
 - cost statement lifecycle;
 - document obligation/document workflow;
 - persisted Contract lifecycle states ngoài date-derived states nếu có.
@@ -1150,7 +1165,7 @@ Mermaid chỉ thể hiện conceptual relationships. Optionality/physical FK det
 - Vendor business key;
 - exact ProductSnapshot/PricingSnapshot fields;
 - exact CommercialSnapshot fields;
-- exact Booking FinancialSnapshot component fields.
+- exact Order/Booking FinancialSnapshot component fields.
 
 ## 16.4. Documents / Integration
 
@@ -1159,7 +1174,7 @@ Mermaid chỉ thể hiện conceptual relationships. Optionality/physical FK det
 - template field mapping;
 - document approval/version statuses;
 - official SO semantics nếu khác working interpretation;
-- external integrations ngoài SSO (Future Scope).
+- external integrations ngoài SSO.
 
 ---
 
@@ -1176,11 +1191,11 @@ Mermaid chỉ thể hiện conceptual relationships. Optionality/physical FK det
 | C1-07 | ContractNumber unique trong Customer |
 | C1-08 | Domain biểu diễn được contract-period overlap; validity rule deferred |
 | C1-09 | Contract requirement override dùng inherit + add/remove DocumentType |
-| C1-10 | KpiTarget có Metric tối thiểu Quantity/SalesValue; source gốc chỉ xác nhận Quantity target |
+| C1-10 | KpiTarget Metric tối thiểu Quantity/SalesValue; source gốc trực tiếp xác nhận Quantity target |
 | C1-11 | Country tách Market và Region |
 | C1-12 | Incoterm/Currency controlled references; PaymentTerm configurable master |
 | C1-13 | IncentiveProgram 1:N IncentiveTier; không hard-code 3 fields |
-| C1-14 | IncentiveTier chỉ khóa Level/TierOrder; threshold/reward deferred |
+| C1-14 | IncentiveTier khóa Level/TierOrder; threshold/reward deferred |
 | C1-15 | Contract temporal display state derived từ dates |
 | C1-16 | Customer 1 → 0..N Contract |
 | C1-17 | Customer và Contract là hai Aggregate Roots |
@@ -1222,11 +1237,12 @@ Mermaid chỉ thể hiện conceptual relationships. Optionality/physical FK det
 | C3-04 | CustomerId required, ContractId optional, CommercialSnapshot persisted |
 | C3-05 | OrderLine giữ Product/Pricing transaction snapshot |
 | C3-06 | FOC explicit trong PricingSnapshot |
-| C3-07 | FinancialAdjustment AR cho Debit/Credit/other, có optional Booking/Receivable scope |
+| C3-07 | FinancialAdjustment AR cho Debit/Credit/other, optional Booking/Receivable scope |
 | C3-08 | OrderLine có fulfillment concept riêng |
 | C3-09 | Order có thể reference responsible User/PIC |
 | C3-10 | DueDate source-of-truth thuộc Receivable |
 | C3-11 | AppliedIncentive là transaction fact riêng, không đồng nhất IncentiveProgram/FinancialAdjustment |
+| **C3-12** | **Order có FinancialSnapshot; FinalAmount là expected/issued Order amount, tách khỏi Booking actual amount** |
 
 ## Booking & Logistics
 
@@ -1245,9 +1261,9 @@ Mermaid chỉ thể hiện conceptual relationships. Optionality/physical FK det
 | C4-11 | BookingLine có fulfillment concept |
 | C4-12 | SO external reference/working interpretation; không tạo ShippingOrder AR |
 | C4-13 | BookingLine không persist duplicate ProductId; Product trace qua OrderLine |
-| C4-14 | BookingLine có PricingSnapshot để bảo toàn financial transaction history |
-| C4-15 | Booking sở hữu FinancialSnapshot; FinalAmount là authoritative actual Booking amount |
-| C4-16 | Order→Booking incentive/adjustment allocation formula deferred nhưng Booking phải giữ amount thực tế đã áp dụng |
+| C4-14 | BookingLine có PricingSnapshot để bảo toàn transaction history |
+| C4-15 | Booking có FinancialSnapshot; FinalAmount là actual fulfilled Booking amount |
+| C4-16 | Order→Booking incentive/adjustment allocation formula deferred nhưng Booking giữ amount thực tế đã áp dụng |
 
 ## Operations
 
@@ -1276,7 +1292,7 @@ Mermaid chỉ thể hiện conceptual relationships. Optionality/physical FK det
 | C6-08 | HC dùng một DocumentType + controlled subtype |
 | C6-09 | PO/PI/Quotation và IV/PL/BatchInformation là generation candidates; BL/CO/TKHQ/HC external/tracked mặc định |
 | C6-10 | Generated revision giữ TemplateVersion reference |
-| C6-11 | CustomerId không dùng để duplicate Customer derive từ Order/Booking trừ khi Customer là direct document subject |
+| C6-11 | CustomerId không duplicate Customer derive từ Order/Booking trừ khi Customer là direct document subject |
 
 ## Finance
 
@@ -1290,7 +1306,7 @@ Mermaid chỉ thể hiện conceptual relationships. Optionality/physical FK det
 | C7-06 | PaymentTransaction child Entity; hỗ trợ partial payments |
 | C7-07 | Outstanding/payment warning state derived |
 | C7-08 | DueDate source-of-truth trên Receivable |
-| C7-09 | Booking-scoped Receivable AmountDue source/snapshot từ Booking FinalAmount |
+| **C7-09** | **Receivable.AmountDue không mặc định source từ Order FinalAmount hoặc Booking FinalAmount; mapping/reconciliation deferred sang Business Rules** |
 | C7-10 | Chưa tạo Bank/Reconciliation AR |
 
 ## Identity / Administration
@@ -1307,27 +1323,38 @@ Mermaid chỉ thể hiện conceptual relationships. Optionality/physical FK det
 
 ---
 
-# 20. Review Findings Addressed in v0.2
+# 20. Independent Review Findings
 
 ## F1 — Booking financial ownership
 
-**Addressed.** Booking có `FinancialSnapshot`; BookingLine có PricingSnapshot; Booking FinalAmount là authoritative actual Booking amount. Applied Incentive được tách khỏi policy IncentiveProgram; FinancialAdjustment có optional Booking scope. Booking-scoped Receivable lấy AmountDue từ Booking FinalAmount theo Business Rules.
+**Resolved.** Booking có `FinancialSnapshot`; BookingLine có intentional PricingSnapshot; Booking FinalAmount là actual fulfilled Booking amount.
 
 ## F2 — Duplicate BookingLine.ProductId
 
-**Addressed.** `ProductId` bị loại khỏi BookingLine. Product trace qua required `OrderLineId`. BookingLine chỉ snapshot financial facts cần lịch sử.
+**Resolved.** ProductId bị loại khỏi BookingLine; trace qua required OrderLineId.
 
 ## F3 — BusinessDocument ownership mismatch
 
-**Addressed.** BusinessDocument hỗ trợ explicit `CustomerId?`, `OrderId?`, `BookingId?`; có invariant ít nhất một direct subject; ER diagram có cả Customer/Order/Booking relationships; CustomerId không được populate chỉ để duplicate derived Customer.
+**Resolved.** BusinessDocument hỗ trợ explicit Customer/Order/Booking subjects và invariant ít nhất một direct subject.
 
-## F4 — BookingCostStatement unsupported 0..N cardinality
+## F4 — BookingCostStatement unsupported 0..N
 
-**Addressed.** Model đổi thành `Booking 1 → 0..1 BookingCostStatement`; revision/version strategy nếu cần sẽ được thiết kế quanh cùng aggregate.
+**Resolved.** Booking có tối đa một BookingCostStatement aggregate trong current model.
 
 ## Clarity — Incentive vs FinancialAdjustment
 
-**Addressed.** `IncentiveProgram` là Customer policy; `AppliedIncentive` là transaction fact; `FinancialAdjustment` giữ Debit/Credit/other financial adjustments. Exact allocation/sign/calculation deferred.
+**Resolved.** IncentiveProgram = policy; AppliedIncentive = transaction fact; FinancialAdjustment = Debit/Credit/other.
+
+## F5 — Order expected amount vs Booking actual amount
+
+**Resolved in v0.3.** Domain Model bảo toàn hai facts riêng:
+
+```text
+Order.FinancialSnapshot.FinalAmount   // expected / issued Order amount
+Booking.FinancialSnapshot.FinalAmount // actual fulfilled Booking amount
+```
+
+`Receivable.AmountDue` là fact riêng của Receivable. Exact reconciliation/mapping giữa ba amounts thuộc Business Rules, không bị Domain Model tự khóa.
 
 ---
 
@@ -1342,31 +1369,32 @@ Domain Model giữ các baseline chính:
 - Order 1:N Booking;
 - Booking là shipping unit chính, không có Shipment entity riêng;
 - ProductPrice và Ingredient List có history;
-- OrderLine giữ agreed transaction pricing snapshot;
-- Booking giữ actual booked financial snapshot theo source workbook;
+- OrderLine giữ transaction pricing snapshot;
+- Order giữ expected/issued financial snapshot;
+- Booking giữ actual fulfilled financial snapshot;
 - BatchAllocation ở BookingLine;
 - WorkItem tách Booking status;
 - Receivable hỗ trợ multiple PaymentTransactions;
-- BusinessDocument phân biệt generated/external và có Customer/Order/Booking direct subjects;
+- BusinessDocument phân biệt generated/external và Customer/Order/Booking subjects;
 - Market khác Region;
-- Customer/Warehouse business entity tách Identity.
+- Customer/Warehouse business entities tách Identity.
 
-Nếu downstream design phát hiện canonical term mới hoặc mâu thuẫn thật sự với glossary, phải cập nhật `01-domain-glossary.md` trước hoặc cùng PR tương ứng; không tạo hai nghĩa canonical song song.
+Nếu downstream design phát hiện canonical term mới hoặc mâu thuẫn thực sự với glossary, phải cập nhật `01-domain-glossary.md` trước hoặc cùng PR tương ứng.
 
 ---
 
-# 22. Definition of Done cho Domain Model
+# 22. Definition of Done
 
 - [x] Consistent với `00-project-scope.md` ở mức Domain Model.
 - [x] Dùng canonical terminology từ `01-domain-glossary.md`.
 - [x] Đã làm rõ tám domain clusters.
 - [x] Không biến tài liệu thành SQL/EF schema.
-- [x] Snapshot boundaries được xác định cho commercial/product/pricing/Booking financial history.
+- [x] Snapshot boundaries được xác định cho commercial/product/pricing/Order/Booking financial history.
 - [x] Derived data được tách khỏi persisted business facts.
 - [x] Workflow/formula chưa đủ nguồn được deferred rõ ràng.
 - [x] Independent PR review đã được thực hiện.
-- [x] Bốn review findings và clarity finding đã được sửa trong v0.2.
-- [ ] Re-review xác nhận không còn blocker trước merge.
+- [x] F1–F5 và clarity finding đã được xử lý trong document content.
+- [ ] Final re-review xác nhận không còn blocker trước merge.
 
 ---
 
@@ -1375,4 +1403,5 @@ Nếu downstream design phát hiện canonical term mới hoặc mâu thuẫn th
 | Version | Date | Description |
 |---|---|---|
 | 0.1 | 2026-08-21 | Khởi tạo Domain Model sau tám clusters. |
-| 0.2 | 2026-08-21 | Xử lý Independent PR Review: thêm Booking financial ownership/snapshot, bỏ duplicate BookingLine.ProductId, chuẩn hóa BusinessDocument subjects, sửa BookingCostStatement cardinality và tách AppliedIncentive khỏi IncentiveProgram/FinancialAdjustment. |
+| 0.2 | 2026-08-21 | Xử lý F1–F4: Booking financial ownership, BookingLine ProductId, BusinessDocument subjects, BookingCostStatement cardinality và Incentive clarity. |
+| 0.3 | 2026-08-21 | Xử lý F5: thêm Order FinancialSnapshot, tách Order expected amount khỏi Booking actual amount và để Receivable reconciliation sang Business Rules. |
