@@ -2,9 +2,9 @@
 
 ## Hệ thống Quản lý Xuất khẩu KDQT (B2B Export Management System)
 
-**Phiên bản:** 0.1  
+**Phiên bản:** 0.2  
 **Trạng thái:** Draft for Business Review  
-**Ngày cập nhật:** 2026-08-21  
+**Ngày cập nhật:** 2026-08-22  
 **Baseline:** `docs/00-project-scope.md`  
 **Canonical vocabulary:** `docs/01-domain-glossary.md`  
 **Domain Model:** `docs/02-domain-model.md`  
@@ -94,7 +94,8 @@ PTCT = phan_tich_chi_tiet_modules.md
 | BR-GEN-009 | LOCKED | Order expected amount, Booking actual amount và Receivable AmountDue là ba business facts riêng, không được đồng nhất ngầm. | DM |
 | BR-GEN-010 | LOCKED | Một business fact chỉ có một authoritative owner; màn hình/report ở domain khác chỉ đọc/derive hoặc snapshot có chủ đích. | DM |
 | BR-GEN-011 | LOCKED | Customer Portal chỉ đọc dữ liệu thuộc Customer account hiện tại; Warehouse chỉ xử lý Booking thuộc Warehouse được phân; Finance Portal read-only. | SCOPE |
-| BR-GEN-012 | LOCKED | Mọi create/update/import nghiệp vụ phải để lại audit trail theo phạm vi Audit capability. | PPTX:1, SCOPE |
+| BR-GEN-012 | LOCKED | Hệ thống phải có audit log cho thay đổi dữ liệu, tối thiểu truy được ai đã sửa và nội dung nào đã bị sửa. | PPTX yêu cầu tổng quát, SCOPE Audit capability |
+| BR-GEN-013 | NORMALIZED | Bao phủ audit cho mọi create/update/delete/import và lưu timestamp + old/new values là normalization từ tài liệu phân tích; exact event coverage/payload phải được khóa trong Audit design/Data Dictionary, không suy ra trực tiếp từ PPTX gốc. | PTCT Cross-cutting; PPTX yêu cầu tổng quát |
 
 ---
 
@@ -134,6 +135,8 @@ Workbook có công thức mô tả Contract Status không nhất quán dấu so 
 | BR-CUS-023 | LOCKED | Incoterm canonical hiện hỗ trợ tối thiểu `EXW`, `FOB`, `DAT`; không tự đổi `DAT` sang thuật ngữ khác. | XLSX:CUS B39; GL |
 | BR-CUS-024 | LOCKED | PaymentTerm là rule/input; concrete `DueDate` thuộc Receivable. | GL, DM |
 | BR-CUS-025 | DEFERRED | `Bank Fee` calculation/effect chưa đủ source để đưa vào FinalAmount formula. | XLSX:CUS B41, DM |
+| BR-CUS-026 | LOCKED | Source Customer có `MarketingPolicy_EN/VN` và `DiscountPolicy_EN/VN`, và workbook ghi mục đích của cả hai là “Để vào công thức tính giá”; vì vậy chúng là commercial/pricing inputs cần được bảo toàn về mặt nghiệp vụ. | XLSX:CUS rows 10-11 |
+| BR-CUS-027 | DEFERRED | Exact canonical representation/ownership, precedence so với Contract/OrderLine discount, scope theo Product/Order và công thức tác động của MarketingPolicy/DiscountPolicy chưa được source khóa; Business Rules không tự thêm field/aggregate mới ngoài Domain Model. | XLSX:CUS rows 10-11; DM |
 
 ## 6.4. Document requirement resolution
 
@@ -203,9 +206,11 @@ Workbook có công thức mô tả Contract Status không nhất quán dấu so 
 | BR-ORD-002 | LOCKED | Order chứa một hoặc nhiều OrderLine khi đạt business state yêu cầu lines; draft validation exact timing thuộc Workflow. | DM |
 | BR-ORD-003 | LOCKED | Order commercial data được resolve từ Customer defaults + optional Contract overrides rồi snapshot. | XLSX:ORD B5-B6; DM |
 | BR-ORD-004 | LOCKED | Order line Product phải reference Product master hiện hữu tại thời điểm chọn. | XLSX:ORD B12, DM |
-| BR-ORD-005 | LOCKED | OrderLine quantity phải là giá trị dương cho line hàng có quantity; zero/negative quantity không phải source-supported normal order line. | XLSX:ORD B14 |
+| BR-ORD-005 | NORMALIZED | Với normal sale/FOC line, quantity được đề xuất phải > 0; primary source chỉ yêu cầu nhập số lượng và không định nghĩa zero/negative semantics, nên invariant này cần business review trước implementation. | XLSX:ORD B14 |
 | BR-ORD-006 | LOCKED | Chỉ Order đã `Published` mới là nguồn để tạo Booking theo source; exact state transition thuộc Workflow. | XLSX:BKG B6-B8; PTCT §4.3 |
-| BR-ORD-007 | LOCKED | OrderLine được đánh dấu fulfillment complete thì không còn eligible để chọn cho Booking mới. | PPTX:6, XLSX:BKG B26/B49 |
+| BR-ORD-007 | LOCKED | OrderLine được đánh dấu fulfillment complete thì không còn eligible để chọn cho Booking mới. | PPTX Order module, XLSX:BKG B26/B49 |
+| BR-ORD-008 | LOCKED | Khi chọn/nhập Product trên Order, hệ thống phải có khả năng xác định/hiển thị mã hàng là “mới” hay “cũ” **theo lịch sử đặt hàng của chính Customer đó**, không dùng lịch sử toàn hệ thống. | PPTX Order module |
+| BR-ORD-009 | DEFERRED | Exact history set để phân loại “mới/cũ” chưa khóa: Draft/Published/Cancelled/Delivered/Paid, FOC-only line, amendment và mốc thời gian nào được tính là “đã từng đặt” cần business confirmation. | PPTX Order module |
 
 ## 8.2. Order number
 
@@ -283,7 +288,7 @@ Workbook Order/Booking mô tả một input “FOC số mấy” và ví dụ 24
 
 | ID | Status | Rule | Source |
 |---|---|---|---|
-| BR-BKG-010 | LOCKED | Hệ thống phải ngăn Booking allocation vượt quá quantity OrderLine còn được phép fulfill. | XLSX:BKG B26, DM |
+| BR-BKG-010 | NORMALIZED | Hệ thống nên ngăn Booking allocation vượt quá quantity OrderLine còn được phép fulfill; source xác nhận phải hiển thị quantity còn lại nhưng không mô tả explicit hard-reject behavior khi vượt. | XLSX:BKG B26, DM |
 | BR-BKG-011 | NORMALIZED | `RemainingQuantity = Ordered/FulfillableQuantity - CommittedQuantity`, trong đó CommittedQuantity là tổng BookingLine quantities còn tiêu thụ fulfillment. | XLSX:BKG B26; DM |
 | BR-BKG-012 | DEFERRED | Booking states nào “còn tiêu thụ fulfillment” (Published/Hold/InTransit/Cancelled...) thuộc Workflow; không hard-code ở đây. | DM Deferred |
 | BR-BKG-013 | DEFERRED | Cách FOC quantity tham gia `RemainingQuantity` khi FOC được phát sinh/điều chỉnh nhiều Booking cần rule chi tiết hơn nếu business cho phép. | DM Deferred |
@@ -321,7 +326,7 @@ Workbook Order/Booking mô tả một input “FOC số mấy” và ví dụ 24
 |---|---|---|---|
 | BR-BAT-001 | LOCKED | Batch thuộc Product; BookingLine sử dụng Batch thông qua BatchAllocation. | DM |
 | BR-BAT-002 | LOCKED | Batch được gán cho BookingLine phải thuộc cùng Product mà BookingLine trace qua OrderLine. | DM invariant |
-| BR-BAT-003 | LOCKED | Tổng BatchAllocation.Quantity của một BookingLine không được vượt BookedQuantity. | DM quantity ownership |
+| BR-BAT-003 | NORMALIZED | Tổng BatchAllocation.Quantity của một BookingLine không nên vượt BookedQuantity; đây là consistency invariant suy ra từ quantity ownership, chưa phải primary-source rule được mô tả trực tiếp. | DM quantity ownership |
 | BR-BAT-004 | LOCKED | Một BookingLine có thể dùng nhiều Batch và một Batch có thể phục vụ nhiều BookingLine theo Domain Model. | DM |
 | BR-BAT-005 | LOCKED | Warehouse chỉ được cập nhật batch cho Booking thuộc Warehouse data scope của account. | SCOPE |
 | BR-BAT-006 | DEFERRED | Batch completion status exact meaning (đủ số batch, đủ quantity, QA complete...) chưa khóa. | PPTX:19; XLSX:BKG |
@@ -365,7 +370,7 @@ Các exact state transitions nằm trong `04-workflow-state-machines.md`; sectio
 | ID | Status | Rule | Source |
 |---|---|---|---|
 | BR-OPS-001 | LOCKED | WorkItem là work/task riêng gắn Booking, có Primary PIC, Deadline và Status. | SCOPE, DM |
-| BR-OPS-002 | LOCKED | `IsOverdue` là derived: deadline đã qua và WorkItem chưa ở trạng thái completion-equivalent. Exact completion states thuộc Workflow. | PTCT §5, DM |
+| BR-OPS-002 | NORMALIZED | `IsOverdue` được đề xuất derive khi deadline đã qua và WorkItem chưa ở trạng thái completion-equivalent; source chỉ yêu cầu đo/cảnh báo công việc chậm deadline, còn exact completion semantics thuộc Workflow. | PPTX Operations; PTCT §5; DM |
 | BR-OPS-003 | LOCKED | Dashboard PIC ratios là derived/reporting data, không phải authoritative fields phải nhập tay. | PPTX:8, DM |
 | BR-OPS-004 | LOCKED | CO Submit Date chỉ hợp lệ sau khi có Customs Clearance Number theo workbook note. | XLSX:OPS B35-B42 |
 | BR-OPS-005 | LOCKED | ETD/ATD/ETA/ATA, container/seal/driver và document facts phải đọc từ authoritative Logistics/Documents ownership thay vì duplicate editable facts trong Operations. | XLSX:OPS, DM |
@@ -445,11 +450,11 @@ Workbook Cost chứa nhiều loại cost hơn danh sách tóm tắt 24 loại; D
 
 | ID | Status | Rule | Source |
 |---|---|---|---|
-| BR-REC-030 | LOCKED | `OverdueDays = max(0, Today - DueDate)` cho obligation còn outstanding. | XLSX:REC B11; PTCT §8.3 |
-| BR-REC-031 | LOCKED | `Overdue` khi obligation còn outstanding và `Today > DueDate`. | XLSX:REC B11-B12 |
+| BR-REC-030 | NORMALIZED | Canonical display `OverdueDays = max(0, Today - DueDate)` cho obligation còn outstanding; XLSX gốc chỉ ghi `Today - DueDate`, nên phép clamp về 0 là normalization cần business review. | XLSX:REC B11; PTCT §8.3 |
+| BR-REC-031 | NORMALIZED | `Overdue` được đề xuất khi obligation còn outstanding và `Today > DueDate`; source xác nhận trạng thái Quá hạn theo DueDate nhưng không mô tả đầy đủ điều kiện outstanding trong công thức. | XLSX:REC B11-B12 |
 | BR-REC-032 | NORMALIZED | `DueSoon` khi obligation còn outstanding, chưa overdue và `0 <= DueDate - Today <= DueSoonThresholdDays`. | XLSX:REC B12; PTCT |
 | BR-REC-033 | DEFERRED | `DueSoonThresholdDays` chưa khóa; PTCT ghi 7 ngày chỉ là giả định cần hỏi khách hàng. | PTCT Open Question #6 |
-| BR-REC-034 | LOCKED | Khi không overdue và không due-soon, payment timing status là `WithinDue/Trong hạn` theo source semantics. | XLSX:REC B12 |
+| BR-REC-034 | NORMALIZED | `WithinDue/Trong hạn` được dùng làm trạng thái complement khi obligation chưa overdue và chưa due-soon; primary source liệt kê ba nhãn nhưng không khóa exact partition logic. | XLSX:REC B12 |
 
 ---
 
@@ -496,7 +501,7 @@ Workbook Cost chứa nhiều loại cost hơn danh sách tóm tắt 24 loại; D
 | BR-IMP-004 | LOCKED | Customer import business key là CustomerCode; Product import business key là ProductionCode. | DM |
 | BR-IMP-005 | NORMALIZED | Hai rows trong cùng import batch có cùng business key nên được coi là conflict/error để tránh kết quả update phụ thuộc row order. | “no duplicate data” requirement + deterministic import design |
 | BR-IMP-006 | LOCKED | Update master data qua import không rewrite historical transaction snapshots. | DM snapshot principle |
-| BR-IMP-007 | LOCKED | Import mutations phải tham gia audit trail tương tự manual CRUD. | PPTX:1; SCOPE |
+| BR-IMP-007 | NORMALIZED | Import mutations nên tham gia audit trail theo cùng audit capability với manual changes; exact event/payload coverage phụ thuộc BR-GEN-013 và Audit design. | PTCT Cross-cutting; PPTX yêu cầu tổng quát |
 | BR-IMP-008 | DEFERRED | Hard delete/soft delete/archive semantics cho Customer/Product chưa khóa dù PPTX có yêu cầu thêm/bớt/xóa dữ liệu tổng quát. | PPTX:1 |
 
 ---
@@ -522,6 +527,8 @@ Các điểm dưới đây **không được coi là bug của tài liệu**. Đ
 | Topic | Source conflict / gap | Treatment |
 |---|---|---|
 | CustomerCode generation | XLSX ghi nhập tay; PTCT nói tự sinh | Unique locked; generation deferred. |
+| Customer-specific Product “mới/cũ” | PPTX yêu cầu phát hiện theo lịch sử từng đặt hàng của Customer nhưng không định nghĩa history eligibility | Capability locked; exact qualifying history deferred. |
+| MarketingPolicy / DiscountPolicy pricing effect | XLSX ghi cả hai “Để vào công thức tính giá” nhưng không có formula/precedence/canonical representation | Source input preserved; exact effect deferred và đưa vào BR-OPEN-03. |
 | Contract Status formula | Workbook dấu so sánh không hợp lý; PTCT mô tả 30-day alert hợp lý hơn | Canonical formula marked NORMALIZED. |
 | Order lifecycle | PPTX dùng `Tạo mới/Phát hành/Hoàn thành` và chỗ khác `Đã thanh toán` | Exact states chuyển sang Workflow. |
 | Booking lifecycle | PPTX/XLSX và PTCT không hoàn toàn giống nhau về `Ongoing` | Exact state machine chuyển sang Workflow. |
@@ -558,7 +565,7 @@ Workflow phải reuse rules trong tài liệu này, đặc biệt:
 
 - only Published Order eligible for Booking;
 - completed OrderLine không eligible cho Booking mới;
-- over-allocation prohibited;
+- áp dụng BR-BKG-010/011 cho remaining quantity/over-allocation; hard-reject chỉ được khóa sau khi `NORMALIZED` rule được business xác nhận;
 - Warehouse “Đã giao hàng” → source side effects;
 - Booking actual financial amount chỉ được coi là actual sau fulfillment/delivery;
 - document obligations phải snapshot ở transaction boundary phù hợp.
@@ -628,6 +635,8 @@ Xác nhận exact base và sequence cho:
 
 ```text
 Discount %
+Customer MarketingPolicy
+Customer DiscountPolicy
 Label Fee %
 Other Fee %
 VAT
@@ -637,6 +646,8 @@ Debit/Credit
 Other adjustment
 Rounding
 ```
+
+Đặc biệt cần xác nhận `MarketingPolicy`/`DiscountPolicy` tác động trực tiếp vào amount, chỉ là policy text để người dùng tham chiếu, hay được resolve thành discount/fee cụ thể ở một bước khác.
 
 ## BR-OPEN-04 — Receivable generation/reconciliation
 
@@ -733,4 +744,5 @@ Tài liệu được xem là ready để baseline khi:
 
 | Version | Date | Description |
 |---|---|---|
+| 0.2 | 2026-08-22 | Xử lý Independent Review F1-F4: bổ sung Customer-specific new/old Product history rule; ghi nhận MarketingPolicy/DiscountPolicy là pricing inputs nhưng defer công thức/representation; hạ payment và consistency invariants chưa đủ primary-source evidence từ LOCKED xuống NORMALIZED; tách audit requirement gốc khỏi normalized full-CRUD coverage. |
 | 0.1 | 2026-08-21 | Khởi tạo Business Rules từ XLSX/PPTX/PTCT và merged Domain Model; phân loại LOCKED/NORMALIZED/DEFERRED; xác định 8 critical open decisions. |
