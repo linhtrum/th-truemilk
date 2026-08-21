@@ -2,11 +2,11 @@
 
 ## Hệ thống Quản lý Xuất khẩu KDQT (B2B Export Management System)
 
-**Phiên bản:** 0.1  
+**Phiên bản:** 0.2  
 **Trạng thái:** Living Draft — Canonical Vocabulary  
 **Ngày cập nhật:** 2026-08-21  
 **Baseline:** `docs/00-project-scope.md`  
-**Nguồn nghiệp vụ:** `website_modules_analysis.md`, tài liệu PPTX yêu cầu gốc, workbook Excel nghiệp vụ gốc và các quyết định làm rõ `GLOSSARY-01` → `GLOSSARY-30`.
+**Nguồn nghiệp vụ:** `website_modules_analysis.md`, tài liệu PPTX yêu cầu gốc, workbook Excel nghiệp vụ gốc và các quyết định làm rõ `GLOSSARY-01` → `GLOSSARY-34`.
 
 ---
 
@@ -31,20 +31,18 @@ Mục tiêu là bảo đảm cùng một khái niệm nghiệp vụ được hi�
 
 ## 2. Nguyên tắc chuẩn hóa thuật ngữ
 
-### 2.1. Canonical term
+### 2.1. Một khái niệm — một canonical term
 
-Mỗi khái niệm nghiệp vụ nên có **một canonical term** dùng xuyên suốt domain model và code.
+Mỗi khái niệm nghiệp vụ nên có một canonical term dùng xuyên suốt domain model và code.
 
 Ví dụ:
 
-- `Product` là canonical term; `SKU`, `Item`, `Goods`, `Mã hàng` là alias/ngữ cảnh sử dụng nếu cùng chỉ một đối tượng.
+- `Product` là canonical term; `SKU`, `Item`, `Goods`, `Mã hàng` là alias theo ngữ cảnh nếu cùng chỉ một đối tượng.
 - `WorkItem` là canonical term; `Task` là alias phổ thông/UI.
 - `Incoterm` là canonical term; `Trade Term` là alias nghiệp vụ/UI.
-- `Carrier` là canonical term tổng quát; `Shipping Line` là carrier trong vận tải biển.
+- `Carrier` là canonical term tổng quát; `Shipping Line` là Carrier trong vận tải biển.
 
-### 2.2. Business identifier và technical identifier
-
-Business identifier không được đồng nhất với technical identifier.
+### 2.2. Business identifier khác technical identifier
 
 Ví dụ:
 
@@ -56,37 +54,45 @@ Booking.Id              // technical identifier
 Booking.BookingCode     // internal business identifier
 ```
 
-### 2.3. Internal reference và external reference
+### 2.3. Internal reference khác external reference
 
 Các mã nội bộ của hệ thống phải được phân biệt với mã do Customer/Carrier/đối tác cung cấp.
 
-Ví dụ:
-
 ```text
 OrderNumber               // hệ thống sinh
-CustomerPoNumber           // Customer cung cấp
+CustomerPoNumber           // Customer cung cấp nếu có
 BookingCode                // hệ thống sinh
-CarrierBookingNumber       // Carrier/Forwarder cung cấp
+CarrierBookingNumber       // Carrier/đơn vị vận chuyển cung cấp
 ShippingOrderNumber        // external logistics reference
 BillOfLadingNumber         // external logistics reference
 ```
 
-### 2.4. Snapshot commercial data
+### 2.4. Dữ liệu giao dịch phải ổn định theo thời điểm giao dịch
 
-Các điều kiện thương mại đã áp dụng cho giao dịch phải được hiểu là dữ liệu của giao dịch đó, không phụ thuộc động vào master data sau này.
+Các điều kiện thương mại đã áp dụng cho Order/OrderLine không được hiểu là tham chiếu động vào master data hiện tại.
 
-Ví dụ:
+Ví dụ về ngữ nghĩa:
 
-- `Customer.DefaultIncoterm` → default;
-- `Order.Incoterm` → snapshot áp dụng cho Order;
-- `Customer.DefaultPaymentTerm` → default;
-- `Order.PaymentTerm` → snapshot áp dụng cho Order;
-- `ProductPrice` → giá cơ sở theo hiệu lực;
-- `OrderLine.UnitPrice` → giá thực tế đã chốt cho OrderLine.
+- Customer có default Incoterm; Order có Incoterm thực tế áp dụng.
+- Customer có default Payment Term; Order có Payment Term thực tế áp dụng.
+- ProductPrice có hiệu lực theo thời gian; OrderLine giữ giá đã chốt.
 
-### 2.5. Glossary không thay thế Domain Model
+Chi tiết snapshot field, persistence và versioning thuộc Domain Model/Data Dictionary.
 
-Các quan hệ trong tài liệu này thể hiện **ngữ nghĩa nghiệp vụ**, không mặc định quyết định cấu trúc table/entity cuối cùng nếu chưa được khóa trong tài liệu domain/data tương ứng.
+### 2.5. Glossary không thay thế Domain Model hoặc Business Rules
+
+Glossary trả lời chủ yếu các câu hỏi:
+
+- thuật ngữ này nghĩa là gì;
+- khác thuật ngữ kia ở đâu;
+- alias nào ánh xạ về canonical term nào;
+- nguồn đang dùng tên gì.
+
+Glossary **không phải nguồn chuẩn cho mọi công thức, schema, cardinality hoặc state transition**. Chỉ giữ các quan hệ đã được Project Scope hoặc phiên làm rõ chốt rõ và cần thiết để hiểu nghĩa của thuật ngữ. Công thức, validation, exact cardinality và state machine được khóa ở tài liệu downstream.
+
+### 2.6. Source wording và normalized wording
+
+Khi workbook/PPTX dùng tên chưa chuẩn hoặc nhập nhằng, glossary phải ghi rõ ánh xạ từ tên nguồn sang canonical term thay vì âm thầm thay nghĩa.
 
 ---
 
@@ -95,118 +101,60 @@ Các quan hệ trong tài liệu này thể hiện **ngữ nghĩa nghiệp vụ*
 ## 3.1. KDQT
 
 **Tên đầy đủ:** Phòng Kinh Doanh Quốc Tế.  
-**English:** International Business / Export Sales function, tùy naming chính thức của tổ chức được xác nhận sau.
+**English:** International Business / Export Sales function; tên tiếng Anh chính thức của đơn vị sẽ dùng theo naming tổ chức khi được xác nhận.
 
-Nhóm người dùng nội bộ chịu trách nhiệm quản lý Customer, Product, Order, Booking, vận hành, chi phí, giao hàng và theo dõi thanh toán.
-
----
+Nhóm người dùng nội bộ chịu trách nhiệm Customer, Product, Order, Booking, vận hành, chi phí, giao hàng và theo dõi thanh toán.
 
 ## 3.2. Customer — Khách hàng
 
 Business entity đại diện cho tổ chức/doanh nghiệp B2B mua hàng.
 
-Customer có thể sở hữu hoặc liên quan đến:
-
-- Contract;
-- Order;
-- KPI Target;
-- Incentive Program;
-- default commercial terms;
-- Document Requirements;
-- Customer Account.
+Customer có thể liên quan đến Contract, Order, KPI Target, Incentive Program, commercial defaults, Document Requirement và Customer Account.
 
 ```text
 Customer != User
 Customer != CustomerAccount
 ```
 
----
-
 ## 3.3. Customer Account — Tài khoản khách hàng
 
 Account truy cập Customer Portal của một Customer cụ thể.
 
-Theo Project Scope hiện tại:
-
-```text
-Customer 1 ─── 1 CustomerAccount
-```
-
-Customer Account xác định data scope của Customer Portal, nhưng không phải business entity Customer.
-
----
+Theo Project Scope hiện tại, mỗi Customer có đúng một Customer Account. Account xác định data scope của Customer Portal nhưng không phải business entity Customer.
 
 ## 3.4. Warehouse — Kho
 
-Business entity đại diện cho kho/địa điểm thực hiện các hoạt động như:
+Business entity đại diện cho kho/địa điểm thực hiện các hoạt động như hold hàng, batch, dán tem, đóng/loading hàng và bàn giao hàng.
 
-- hold hàng;
-- nhập/kiểm tra Batch;
-- dán tem;
-- đóng/loading hàng;
-- bàn giao hàng ra khỏi kho.
-
-Theo glossary hiện tại, mỗi Booking có **một Warehouse đóng hàng chính**.
-
----
+Theo quyết định glossary hiện tại, một Booking có một Warehouse đóng hàng chính.
 
 ## 3.5. Warehouse Account — Tài khoản kho
 
-Account truy cập Warehouse Portal cho một Warehouse cụ thể.
+Account truy cập Warehouse Portal của một Warehouse cụ thể.
 
-Theo Project Scope hiện tại:
-
-```text
-Warehouse 1 ─── 1 WarehouseAccount
-```
-
-Warehouse Account chỉ được truy cập dữ liệu thuộc Warehouse tương ứng.
-
----
+Theo Project Scope hiện tại, mỗi Warehouse có đúng một Warehouse Account và account chỉ truy cập dữ liệu của Warehouse tương ứng.
 
 ## 3.6. Finance User — Người dùng tài chính/kế toán
 
-User truy cập Finance Portal để xem, lọc và download dữ liệu về Order/Booking, chi phí và công nợ.
+User truy cập Finance Portal để xem, lọc và download dữ liệu Order/Booking, chi phí và công nợ.
 
 Finance Portal hiện là read-only ở cấp nghiệp vụ.
 
----
-
 ## 3.7. System Administrator
 
-User có quyền quản trị hệ thống như user, role, permission, account nghiệp vụ, master data, system settings, audit, import/export configuration và document templates.
+User có quyền quản trị user, role, permission, account nghiệp vụ, master data, system settings, audit, import/export configuration và document templates.
 
 System Administrator không mặc định có quyền thực hiện nghiệp vụ KDQT/Warehouse/Finance nếu không được cấp permission tương ứng.
 
----
-
 ## 3.8. User — Người dùng / Identity
 
-Danh tính dùng cho authentication và authorization.
-
-User có thể xác thực bằng local account hoặc SSO theo Project Scope.
-
-```text
-Business entity
-    !=
-Authentication identity
-```
+Danh tính dùng cho authentication và authorization; có thể xác thực bằng local account hoặc SSO.
 
 Không đặt credential, password hash, token hoặc role trực tiếp trong `Customer` hay `Warehouse`.
 
----
-
 ## 3.9. PIC — Person In Charge
 
-Người chịu trách nhiệm chính cho một Work Item.
-
-Ở cấp glossary hiện tại:
-
-```text
-WorkItem ─── 1 primary PIC
-```
-
-Collaborator/multiple-assignee model nếu cần sẽ được xác định ở Domain Model.
+Người chịu trách nhiệm chính cho một Work Item. Ở mức glossary hiện tại, WorkItem có một primary PIC; collaborator/multiple-assignee model nếu cần được xác định ở Domain Model.
 
 ---
 
@@ -214,106 +162,61 @@ Collaborator/multiple-assignee model nếu cần sẽ được xác định ở 
 
 ## 4.1. Contract — Hợp đồng khách hàng
 
-Hợp đồng thương mại của Customer.
+Hợp đồng thương mại của Customer. Một Customer có thể có nhiều Contract theo thời gian để giữ lịch sử.
 
-```text
-Customer
-└── 0..N Contract
-```
-
-Thuộc tính khái niệm tối thiểu:
-
-- Contract Number;
-- Effective Date;
-- Expiry Date;
-- Status.
-
-Một Customer có thể có nhiều Contract theo thời gian để giữ lịch sử.
-
----
+Thông tin nguồn tối thiểu gồm Contract Number, Effective Date, Expiry Date và Status.
 
 ## 4.2. Contract Status
 
-Lifecycle status cốt lõi của Contract.
+Lifecycle status của Contract.
 
-Ở cấp glossary hiện tại tối thiểu phân biệt:
+Ở mức glossary tối thiểu phân biệt `Effective` và `Expired`.
 
-- `Effective`;
-- `Expired`.
+`ExpiringSoon` được hiểu là **derived alert** từ Expiry Date + alert threshold, không phải bắt buộc là lifecycle state được lưu riêng.
 
-`ExpiringSoon` là **derived alert**, không phải lifecycle status cốt lõi.
-
-```text
-ExpiryDate + alert threshold
-          ↓
-     ExpiringSoon alert
-```
-
----
+> Lưu ý: workbook gốc có công thức mô tả trạng thái với dấu so sánh chưa nhất quán; logic chính xác phải được xác định trong Business Rules, không sao chép nguyên công thức workbook vào implementation.
 
 ## 4.3. Incoterm
 
 Canonical domain term cho điều kiện thương mại; `Trade Term` là UI/business alias.
 
-Nguồn hiện sử dụng các giá trị như:
+Nguồn hiện sử dụng EXW, FOB và DAT.
 
-- EXW;
-- FOB;
-- DAT.
+- Customer có default Incoterm.
+- Order có Incoterm thực tế áp dụng cho giao dịch.
+- ProductPrice được phân loại theo Incoterm.
 
-Không tự động thay đổi `DAT` sang thuật ngữ Incoterms khác nếu nghiệp vụ chưa xác nhận.
-
-```text
-Customer.DefaultIncoterm
-Order.Incoterm
-ProductPrice.Incoterm
-```
-
-`Order.Incoterm` là snapshot của điều kiện thực tế áp dụng cho Order.
-
----
+Không tự động thay `DAT` bằng thuật ngữ Incoterms khác nếu nghiệp vụ chưa xác nhận thay đổi.
 
 ## 4.4. Payment Term — Điều khoản thanh toán
 
 Quy tắc thương mại xác định khi nào khoản phải thu đến hạn.
 
-Ví dụ nghiệp vụ có thể gồm:
-
-- prepaid;
-- T/T 30 days;
-- T/T 45 days;
-- N days after BL date.
-
-```text
-Customer.DefaultPaymentTerm
-Order.PaymentTerm
-```
-
-`Order.PaymentTerm` là snapshot áp dụng cho Order.
-
----
+`PaymentTerm` là rule/điều khoản; `DueDate` là ngày cụ thể của một Receivable.
 
 ## 4.5. Due Date — Ngày đến hạn
 
-Ngày cụ thể mà một Receivable đến hạn thanh toán.
-
-```text
-PaymentTerm = rule
-DueDate     = concrete date
-```
-
-Due Date được xác định từ Payment Term và mốc tham chiếu theo Business Rules.
-
----
+Ngày cụ thể mà một Receivable đến hạn thanh toán, được xác định từ Payment Term và mốc tham chiếu theo Business Rules.
 
 ## 4.6. Currency — Đồng tiền
 
-Đơn vị tiền tệ áp dụng cho pricing, Order, adjustment, receivable và payment.
+Đơn vị tiền tệ áp dụng cho pricing, Order, financial adjustment, receivable và payment.
 
-Nguồn hiện sử dụng tối thiểu:
+Nguồn hiện sử dụng tối thiểu VND và USD.
 
-- VND;
-- USD.
+## 4.7. Market — Thị trường
+
+Thị trường xuất khẩu/kinh doanh của Customer. Workbook nguồn có `Market_EN` và `Market_VN` riêng.
+
+`Market` không đồng nhất với `Region`.
+
+## 4.8. Region — Vùng phân luồng nội bộ
+
+Khái niệm phân vùng nội bộ phục vụ phân luồng dữ liệu/Finance.
+
+Workbook nguồn có field `REGION` với lựa chọn `Bắc/Nam` và ghi chú dùng để phân cho hai account FIN Bắc/Nam.
+
+Exact Region taxonomy, permission và data-scope rule được xác định ở Master Data/Role & Permission Matrix; không gộp Region vào Market.
 
 ---
 
@@ -323,108 +226,49 @@ Nguồn hiện sử dụng tối thiểu:
 
 Canonical domain term cho một SKU/mã hàng cụ thể có thể xuất hiện trên OrderLine và BookingLine.
 
-```text
-Product
-├── Id                  // technical identifier
-├── ProductionCode      // business identifier
-├── NameVi
-├── NameEn
-├── HSCode
-├── ProductBarcode
-├── BlockBarcode
-├── CartonBarcode
-├── Packaging
-├── ShelfLife
-├── StorageCondition
-└── PhysicalSpecifications
-```
+Nguồn chứa các thuộc tính như Production Code, tên VN/EN, HS Code, Product/Block/Carton barcode, packaging, shelf life, storage condition và physical specifications.
 
 `SKU`, `Item`, `Goods`, `Hàng hóa`, `Mã hàng` có thể là alias theo ngữ cảnh nhưng không tạo domain entity song song nếu cùng chỉ một Product.
-
----
 
 ## 5.2. Production Code — Mã sản phẩm
 
 Business identifier chính của Product.
 
-```text
-Mã hàng = Product.ProductionCode
-```
-
-trừ khi màn hình/tài liệu ghi rõ đang nói đến barcode hoặc mã khác.
-
----
+`Mã hàng` trong giao tiếp nghiệp vụ mặc định ánh xạ về `Product.ProductionCode`, trừ khi màn hình/tài liệu ghi rõ đang nói đến barcode hoặc mã khác.
 
 ## 5.3. Barcode
 
 Identifier bổ sung của Product/packaging level.
 
-Nguồn hiện có các loại:
-
-- Product Barcode;
-- Block Barcode;
-- Carton Barcode.
-
-Barcode không thay thế Production Code làm canonical business identifier của Product.
-
----
+Nguồn có Product Barcode, Block Barcode và Carton Barcode. Barcode không thay thế Production Code làm canonical business identifier.
 
 ## 5.4. HS Code
 
-Mã phân loại hàng hóa phục vụ nghiệp vụ hải quan/xuất khẩu.
-
-HS Code là attribute/reference của Product, không phải Product identifier chính.
-
----
+Mã phân loại hàng hóa phục vụ nghiệp vụ hải quan/xuất khẩu; là attribute/reference của Product, không phải Product identifier chính.
 
 ## 5.5. Product Price — Giá sản phẩm
 
-Domain concept riêng, có hiệu lực theo thời gian.
+Khái niệm giá cơ sở của Product có hiệu lực theo thời gian và được phân biệt theo Incoterm/Currency.
 
-```text
-Product
-└── 1..N ProductPrice
-    ├── Incoterm
-    ├── Currency
-    ├── UnitPrice
-    ├── EffectiveFrom
-    └── EffectiveTo?
-```
-
-Không overwrite giá cũ khi có bảng tăng giá mới; giá cũ trở thành price history.
-
----
+Không overwrite lịch sử giá khi có giá mới; exact versioning/effective-date model được khóa trong Domain Model/Data Dictionary.
 
 ## 5.6. Base Product Price — Giá cơ sở
 
-Giá cơ sở của Product theo Incoterm, Currency và effective period.
+Giá cơ sở của Product theo Incoterm, Currency và thời gian hiệu lực.
 
-Không tạo `CustomerProductPrice` như một canonical concept ở thời điểm hiện tại vì nguồn chưa xác nhận bảng giá độc lập cho từng Customer.
-
----
+Nguồn chưa xác nhận một bảng giá độc lập theo từng Customer, vì vậy `CustomerProductPrice` chưa là canonical concept.
 
 ## 5.7. Order Line Unit Price — Giá chốt trên dòng Order
 
-Giá thực tế được áp dụng cho OrderLine và được snapshot trên giao dịch.
+Giá thực tế được áp dụng cho OrderLine tại giao dịch.
 
-Khái niệm tổng quát:
-
-```text
-Base Product Price
-+/- commercial adjustments
-          ↓
-OrderLine.UnitPrice
-```
-
-Việc tính chính xác được định nghĩa trong Business Rules.
-
----
+Giá này được hiểu là giá đã chốt của OrderLine; công thức lấy Base Product Price và các điều chỉnh cụ thể thuộc Business Rules.
 
 ## 5.8. Price Adjustment — Điều chỉnh giá
 
-Khái niệm tổng quát cho các thay đổi khi xác định giá giao dịch như discount, label fee hoặc điều chỉnh thương mại khác.
+Khái niệm tổng quát cho discount, label fee, other fee hoặc điều chỉnh thương mại khi hình thành giá giao dịch.
 
-Không đồng nhất `PriceAdjustment` với `FinancialAdjustment` sau khi Order đã phát sinh nghĩa vụ tài chính.
+Không đồng nhất `PriceAdjustment` với `FinancialAdjustment` dùng cho Debit/Credit Note.
 
 ---
 
@@ -436,111 +280,73 @@ Canonical business entity đại diện cho một đơn hàng xuất khẩu củ
 
 Order chứa các điều kiện thương mại và nhiều OrderLine, đồng thời có thể được thực hiện qua nhiều Booking.
 
-```text
-Customer
-└── Order
-    ├── OrderLines
-    └── 1..N Booking
-```
-
 Order có lifecycle riêng; không dùng Booking status trực tiếp làm Order status.
-
----
 
 ## 6.2. Order Number — Mã đơn hàng nội bộ
 
 Business identifier nội bộ do hệ thống sinh cho Order.
 
-Nguồn đề xuất pattern dạng:
+### Source-to-canonical mapping
+
+Workbook/PPTX gốc dùng field **`Số PO`** và mô tả hệ thống tự gợi ý số theo pattern kiểu:
 
 ```text
-TênKH/MãNước-Năm-SốTT
+Tên khách/Mã nước-Năm-Số thứ tự
 ```
 
-Quy tắc chính xác được định nghĩa trong Business Rules/Data Dictionary.
+Trong hệ thống mới, field nguồn **`Số PO` do hệ thống tự sinh** được chuẩn hóa thành:
 
----
+```text
+Order.OrderNumber
+```
+
+Quy tắc format chính xác thuộc Business Rules/Data Dictionary.
 
 ## 6.3. Customer PO Number — Số PO của khách hàng
 
-Số Purchase Order do Customer cung cấp.
+External reference do Customer cung cấp **nếu nghiệp vụ có Customer PO riêng**.
 
 ```text
-OrderNumber       != CustomerPoNumber
+OrderNumber != CustomerPoNumber
 ```
 
-Một Order của hệ thống phải phân biệt mã nội bộ với PO reference của Customer.
+`CustomerPoNumber` không thay thế mã nội bộ của Order.
 
----
+## 6.4. Purchase Order (PO) — thuật ngữ/chứng từ PO
 
-## 6.4. Purchase Order (PO)
+Để tránh nhập nhằng, glossary áp dụng quy tắc sau:
 
-Đơn đặt hàng/chứng từ PO của Customer hoặc chứng từ PO theo ngữ cảnh nghiệp vụ.
+1. Khi source/UI cũ nói **`Số PO` được hệ thống tự sinh**, canonical meaning là `OrderNumber`, không phải một PurchaseOrder entity.
+2. Khi nói **PO của Customer**, canonical reference là `CustomerPoNumber` hoặc file/chứng từ Customer PO nếu có.
+3. Khi chức năng nguồn nói **“In ra PO theo form có sẵn”**, đó là một `BusinessDocument` loại `PurchaseOrder` được render từ dữ liệu Order theo template nghiệp vụ; nó không phải entity giao dịch thứ hai.
 
-Trong domain model:
-
-- canonical transaction entity là `Order`;
-- không tạo entity `PurchaseOrder` song song với Order chỉ vì UI/tài liệu gọi “PO”;
-- `CustomerPoNumber` là external/business reference;
-- nếu hệ thống render/export PO form, đó là một `GeneratedDocument` loại `PurchaseOrder`, không phải một Order thứ hai.
-
----
+Không tạo `PurchaseOrder` entity song song với `Order` chỉ vì source dùng chữ PO ở nhiều ngữ cảnh.
 
 ## 6.5. Order Line — Dòng hàng đơn hàng
 
-Một dòng hàng thương mại trong Order.
-
-Khái niệm có thể chứa:
-
-- Product;
-- ordered quantity;
-- unit price;
-- discount;
-- tax;
-- FOC;
-- fee/adjustment liên quan.
+Một dòng hàng thương mại trong Order, gắn Product và các dữ liệu giao dịch như quantity, unit price, discount, tax, FOC và fee/adjustment liên quan.
 
 Một OrderLine có thể được chia qua nhiều BookingLine.
-
----
 
 ## 6.6. Ordered Quantity
 
 Số lượng Product được đặt trên OrderLine.
 
----
-
 ## 6.7. Booked Quantity
 
-Tổng số lượng của OrderLine đã được phân bổ sang BookingLine.
+Số lượng của OrderLine đã được phân bổ sang các BookingLine.
 
-```text
-BookedQuantity
-= SUM(BookingLine.Quantity for OrderLine)
-```
-
----
+Không khóa công thức chi tiết trong glossary; cách tính khi có FOC, cancellation, adjustment thuộc Business Rules.
 
 ## 6.8. Remaining Quantity
 
-Số lượng của OrderLine còn có thể phân bổ sang Booking.
-
-Khái niệm cơ bản:
-
-```text
-RemainingQuantity
-= OrderedQuantity - BookedQuantity
-```
-
-FOC, cancellation, adjustment và các ngoại lệ được định nghĩa ở Business Rules.
-
----
+Số lượng OrderLine còn có thể phân bổ sang Booking theo rule nghiệp vụ.
 
 ## 6.9. FOC — Free of Charge
 
-Số lượng/hàng hóa được cung cấp miễn phí theo điều kiện thương mại.
+Hàng/số lượng cung cấp miễn phí theo điều kiện thương mại.
 
-Cách FOC ảnh hưởng ordered quantity, booked quantity, invoice value và KPI được định nghĩa sau trong Business Rules.
+Cách FOC ảnh hưởng ordered quantity, booked quantity, invoice value và KPI thuộc Business Rules.
 
 ---
 
@@ -548,282 +354,161 @@ Cách FOC ảnh hưởng ordered quantity, booked quantity, invoice value và KP
 
 ## 7.1. Booking
 
-Canonical domain entity đại diện cho **một đợt/lần thực hiện vận chuyển** toàn bộ hoặc một phần của Order.
+Canonical domain entity đại diện cho một đợt/lần thực hiện vận chuyển toàn bộ hoặc một phần của Order.
+
+Theo Project Scope:
 
 ```text
 Order 1 ─── N Booking
 ```
 
-Booking là đơn vị vận chuyển chính của hệ thống; **không tạo entity `Shipment` riêng** ở thời điểm hiện tại.
-
----
+Booking là đơn vị vận chuyển chính; chưa tạo entity `Shipment` riêng.
 
 ## 7.2. Shipment
 
-Không phải canonical domain entity trong phạm vi hiện tại.
-
-Khi xuất hiện trong giao tiếp nghiệp vụ, `shipment` có thể được dùng như danh từ chung cho một lô vận chuyển, nhưng canonical entity vẫn là `Booking`.
-
----
+Không phải canonical domain entity trong phạm vi hiện tại. Khi xuất hiện trong giao tiếp nghiệp vụ, `shipment` có thể được dùng như danh từ chung cho một lô vận chuyển nhưng canonical entity vẫn là `Booking`.
 
 ## 7.3. Delivery — Giao hàng
 
-Quá trình/giai đoạn giao vận của Booking.
-
-`Delivery` hiện không phải domain entity độc lập; trạng thái và kế hoạch được thể hiện qua Booking/Delivery Schedule và các workflow liên quan.
-
----
+Quá trình/giai đoạn giao vận của Booking. `Delivery` hiện không phải domain entity độc lập; kế hoạch/trạng thái được thể hiện qua Booking, Delivery Schedule và workflow liên quan.
 
 ## 7.4. Booking Code
 
 Mã nội bộ do hệ thống sinh cho Booking và tồn tại ngay khi Booking được tạo.
 
-```text
-Booking.Id          // technical identifier
-Booking.BookingCode // internal business identifier
-```
-
----
-
 ## 7.5. Carrier Booking Number
 
-External booking reference do Carrier/đơn vị vận chuyển cung cấp.
+External booking reference do Carrier/đơn vị vận chuyển cung cấp. Có thể chưa tồn tại khi Booking vừa được tạo.
 
-Có thể chưa tồn tại khi Booking vừa được tạo.
+Workbook nguồn dùng `Số Booking` theo cách linh hoạt, thậm chí cho phép ghi tạm PO rồi thay bằng Booking/B/L. Hệ thống mới **không dùng một field duy nhất theo cách này** mà tách rõ các reference.
 
-```text
-BookingCode != CarrierBookingNumber
-```
+## 7.6. SO — working interpretation: Shipping Order
 
----
+Nguồn gốc chỉ ghi `Số SO` và `Ngày SO`; không viết đầy đủ chữ viết tắt.
 
-## 7.6. Shipping Order (SO)
+Trong dự án hiện tại, **working interpretation được chấp nhận là `Shipping Order`**, dựa trên ngữ cảnh SO gắn với Booking/Warehouse. Đây chưa được xem là bằng chứng rằng tài liệu nguồn đã định nghĩa chính thức chữ SO.
 
-**SO = Shipping Order** theo cách hiểu nghiệp vụ đã được xác nhận cho dự án.
-
-Shipping Order là chứng từ/mã tham chiếu logistics liên quan đến Booking.
-
-```text
-Booking
-├── ShippingOrderNumber
-└── ShippingOrderDate
-```
-
-Tài liệu nguồn không viết đầy đủ chữ “Shipping Order”; cách mở rộng chữ viết tắt này được xác nhận trong phiên làm rõ dựa trên ngữ cảnh SO gắn với Booking/Warehouse.
-
----
+Nếu nghiệp vụ/upstream system sau này xác nhận SO có nghĩa khác, glossary phải cập nhật.
 
 ## 7.7. Shipping Order Number — Số SO
 
-External logistics reference của Shipping Order.
+External logistics reference hiện được diễn giải theo working interpretation `Shipping Order`.
 
-Warehouse có thể dùng SO để nhận diện/download danh sách hàng theo nghiệp vụ.
-
----
+Warehouse dùng SO để nhận diện/download danh sách hàng theo nghiệp vụ nguồn.
 
 ## 7.8. Shipping Order Date — Ngày SO
 
-Ngày của Shipping Order/reference tương ứng.
-
-Có thể nullable trước khi nhận SO.
-
----
+Ngày của reference SO tương ứng; nguồn VẬN HÀNH có `Ngày SO` link theo Booking.
 
 ## 7.9. Bill of Lading (BL) — Vận đơn
 
-External logistics document do Carrier/Shipping Line cung cấp cho Booking.
+External logistics document/reference gắn với Booking.
 
-Trong scope hiện tại hệ thống **không generate BL**; hệ thống lưu metadata/reference/file nếu có.
-
----
+Trong phạm vi nguồn hiện tại, hệ thống không được mô tả là đơn vị phát hành/generate BL; BL được lưu/tracking/upload khi có.
 
 ## 7.10. Bill of Lading Number — Số BL
 
-External reference number của Bill of Lading.
-
-```text
-Booking
-└── BillOfLadingNumber
-```
-
-Không đồng nhất với Booking Code, Carrier Booking Number hoặc SO Number.
-
----
+External reference number của BL. Không đồng nhất với Booking Code, Carrier Booking Number hoặc SO Number.
 
 ## 7.11. Booking Line — Dòng hàng Booking
 
 Phần số lượng của một OrderLine được phân bổ vào một Booking cụ thể.
 
-```text
-OrderLine 1 ─── N BookingLine
-Booking   1 ─── N BookingLine
-```
-
 Một OrderLine có thể được chia qua nhiều Booking.
-
----
 
 ## 7.12. Carrier — Đơn vị vận chuyển
 
 Canonical term tổng quát cho tổ chức trực tiếp cung cấp dịch vụ vận chuyển.
 
-```text
-Carrier
-├── Ocean Carrier / Shipping Line
-├── Air Carrier
-├── Road Carrier
-└── Rail Carrier
-```
-
----
+Có thể gồm Ocean Carrier/Shipping Line, Air Carrier, Road Carrier và Rail Carrier.
 
 ## 7.13. Shipping Line — Hãng tàu
 
-Carrier vận chuyển bằng đường biển.
-
-```text
-TransportMode = Sea
-→ Carrier may be presented as Shipping Line
-```
-
-Không dùng `ShippingLine` làm canonical field cho mọi phương thức vận tải.
-
----
+Carrier vận chuyển bằng đường biển. Không dùng `ShippingLine` làm canonical field cho mọi phương thức vận tải.
 
 ## 7.14. Forwarder
 
 Đơn vị giao nhận/forwarder nếu nghiệp vụ có phát sinh.
 
-Nguồn hiện chưa xác nhận một field/entity Forwarder riêng, vì vậy **Forwarder chưa là core domain concept bắt buộc**.
-
-Nếu bổ sung sau, Forwarder phải được phân biệt với Carrier.
-
----
+Nguồn hiện chưa xác nhận field/entity Forwarder riêng, vì vậy Forwarder chưa là core domain concept bắt buộc. Nếu bổ sung sau, phải phân biệt với Carrier.
 
 ## 7.15. Transport Mode — Phương thức vận chuyển
 
 Canonical concept cho loại hình vận tải chính của Booking.
 
-Giá trị chuẩn hóa hiện tại:
+Giá trị chuẩn hóa hiện tại: `Sea`, `Air`, `Road`, `Rail`.
 
-- `Sea`;
-- `Air`;
-- `Road`;
-- `Rail`.
-
-Giá trị `Way` trong tài liệu nguồn được chuẩn hóa thành `Road` trong domain mới.
-
----
+Giá trị `Way` trong nguồn được chuẩn hóa thành `Road`; `Rainway/Railway` được chuẩn hóa thành `Rail`.
 
 ## 7.16. Shipment Load Type — Hình thức sử dụng tải/container
 
-Khái niệm khác với Equipment Type.
-
-Giá trị ví dụ:
-
-- `FCL`;
-- `LCL`.
+Khái niệm khác Equipment Type. Ví dụ: `FCL`, `LCL`.
 
 `LCL` không phải container/equipment type.
 
----
-
 ## 7.17. Transport Equipment
 
-Thiết bị vận chuyển cụ thể gắn với Booking.
-
-```text
-Booking
-└── 0..N TransportEquipment
-```
-
-Một Booking có thể có nhiều equipment/container.
-
----
+Thiết bị vận chuyển cụ thể gắn với Booking. Một Booking có thể có nhiều equipment/container.
 
 ## 7.18. Equipment Type
 
-Loại thiết bị vận chuyển.
+Loại thiết bị vận chuyển, ví dụ nguồn có 20DC, 40DC, 40HC, 20RF, 40RF.
 
-Nguồn hiện có các loại như:
-
-- 20DC;
-- 40DC;
-- 40HC;
-- 20RF;
-- 40RF.
-
-`EquipmentType` khác với `ShipmentLoadType` và `TransportMode`.
-
----
+`EquipmentType` khác `ShipmentLoadType` và `TransportMode`.
 
 ## 7.19. Container Number — Số container
 
-Identifier của container cụ thể.
-
-Là thuộc tính của Transport Equipment, không phải một field duy nhất bắt buộc trên Booking.
-
----
+Identifier của container cụ thể, thuộc Transport Equipment.
 
 ## 7.20. Seal Number — Số chì / seal
 
 Số seal/chì của container/equipment tương ứng.
 
----
-
 ## 7.21. Origin Location
 
 Canonical domain term cho điểm đầu của chặng vận tải chính.
-
-Không khóa domain vào thuật ngữ “Port” để hỗ trợ Sea/Air/Road/Rail.
-
----
 
 ## 7.22. Destination Location
 
 Canonical domain term cho điểm cuối của chặng vận tải chính.
 
----
-
 ## 7.23. POL — Port of Loading
 
-Alias/logistics term dùng chủ yếu cho Sea transport, ánh xạ về Origin Location trong domain.
-
----
+Sea/logistics alias ánh xạ về Origin Location trong domain.
 
 ## 7.24. POD — Port of Discharge
 
-Alias/logistics term dùng chủ yếu cho Sea transport, ánh xạ về Destination Location trong domain.
-
----
+Sea/logistics alias ánh xạ về Destination Location trong domain.
 
 ## 7.25. ETD — Estimated Time of Departure
 
 Thời điểm dự kiến phương tiện vận tải chính khởi hành khỏi Origin Location.
 
-ETD **không đồng nhất** với ngày đóng container/hàng tại Warehouse.
-
----
+Workbook nguồn gọi `Ngày đóng cont ETD`; hệ thống mới **không đồng nhất ETD với Loading Date**.
 
 ## 7.26. ETA — Estimated Time of Arrival
 
 Thời điểm dự kiến phương tiện vận tải chính đến Destination Location.
 
----
+## 7.27. ATD — Actual Time of Departure
 
-## 7.27. Planned Loading Date
+Thời điểm thực tế phương tiện vận tải chính khởi hành.
 
-Ngày/thời điểm dự kiến đóng/loading hàng tại Warehouse.
+Workbook nguồn link ATD khi Booking ở trạng thái `Đang giao`.
 
-Khác với ETD.
+## 7.28. ATA — Actual Time of Arrival
 
----
+Thời điểm thực tế phương tiện vận tải chính đến.
 
-## 7.28. Warehouse Release Date
+Workbook nguồn link ATA khi Booking ở trạng thái `Đã giao`.
 
-Ngày/thời điểm hàng thực tế rời Warehouse.
+## 7.29. Planned Loading Date
 
-Khác với Planned Loading Date và ETD.
+Ngày/thời điểm dự kiến đóng/loading hàng tại Warehouse; khác ETD.
+
+## 7.30. Warehouse Release Date
+
+Ngày/thời điểm hàng thực tế rời Warehouse; khác Planned Loading Date và ETD.
 
 ---
 
@@ -833,90 +518,35 @@ Khác với Planned Loading Date và ETD.
 
 Quan hệ nghiệp vụ xác định Warehouse chịu trách nhiệm đóng hàng cho Booking.
 
-Ở cấp glossary hiện tại:
-
-```text
-Booking N ─── 1 Warehouse
-```
-
-Một Booking chỉ có một Warehouse đóng hàng chính.
-
-Nếu cùng một Order cần xuất hàng từ nhiều Warehouse, tạo nhiều Booking tương ứng.
-
----
+Theo quyết định glossary hiện tại, một Booking có một Warehouse đóng hàng chính. Nếu một Order cần xuất hàng từ nhiều Warehouse, tạo nhiều Booking tương ứng.
 
 ## 8.2. Batch — Lô sản xuất
 
-Lô sản xuất thực tế của một Product.
-
-```text
-Product
-└── 0..N Batch
-```
-
-Batch không thuộc độc quyền một Booking.
-
----
+Lô sản xuất thực tế của một Product. Batch không thuộc độc quyền một Booking.
 
 ## 8.3. Batch Number — Số batch
 
 Business identifier của Batch theo nghiệp vụ sản xuất/traceability.
 
-Unique rule chính xác được định nghĩa trong Data Dictionary vì có thể phụ thuộc Product/plant/time context.
-
----
+Unique rule chính xác thuộc Data Dictionary vì có thể phụ thuộc Product/plant/time context.
 
 ## 8.4. Batch Allocation — Phân bổ batch
 
-Quan hệ xác định một phần số lượng BookingLine được lấy từ Batch nào.
-
-```text
-BookingLine
-└── 0..N BatchAllocation
-    ├── Batch
-    └── Quantity
-```
+Quan hệ xác định phần số lượng BookingLine được lấy từ Batch nào.
 
 Một BookingLine có thể sử dụng nhiều Batch; một Batch có thể được phân bổ cho nhiều BookingLine/Booking.
 
----
-
 ## 8.5. Loading Schedule — Lịch đóng hàng
 
-Domain concept riêng mô tả kế hoạch và tiến độ xử lý hàng tại Warehouse trước khi Booking rời kho.
+Khái niệm mô tả kế hoạch và tiến độ xử lý hàng tại Warehouse trước khi Booking rời kho.
 
-Có thể bao gồm các mốc/trạng thái nghiệp vụ như:
-
-- hold hàng;
-- dán tem;
-- giao hàng/rời kho.
-
-Workflow chính xác được định nghĩa ở tài liệu state machine.
-
----
+Nguồn Warehouse có các mốc/trạng thái như hold hàng, dán tem, đã giao hàng. Workflow chính xác thuộc state-machine document.
 
 ## 8.6. Delivery Schedule — Lịch giao hàng
 
-Domain concept riêng mô tả kế hoạch logistics tổng thể của Booking.
+Khái niệm mô tả lịch logistics tổng thể của Booking, gồm các mốc/thuộc tính như warehouse release, origin/destination, ETD/ETA, equipment/container, driver và notes.
 
-Có thể bao gồm:
-
-- Warehouse Release Date;
-- Origin Location;
-- Destination Location;
-- ETD;
-- ETA;
-- equipment/container;
-- driver/logistics information;
-- notes.
-
-```text
-Booking
-├── LoadingSchedule
-└── DeliverySchedule
-```
-
-Hai khái niệm độc lập nhưng cùng liên kết với Booking.
+Loading Schedule và Delivery Schedule là hai concept riêng nhưng cùng liên kết với Booking.
 
 ---
 
@@ -926,38 +556,77 @@ Hai khái niệm độc lập nhưng cùng liên kết với Booking.
 
 Canonical domain term cho một đơn vị công việc vận hành cần thực hiện cho Booking.
 
-```text
-Booking
-└── 0..N WorkItem
-    ├── Title
-    ├── PIC
-    ├── Deadline
-    └── Status
-```
-
-`Task` là alias phổ thông/UI, không tạo entity song song nếu cùng chỉ WorkItem.
-
----
+WorkItem có các khái niệm như Title, PIC, Deadline và Status. `Task` là alias phổ thông/UI.
 
 ## 9.2. Deadline
 
-Thời hạn cần hoàn thành Work Item.
-
-Deadline được dùng để xác định overdue/chậm tiến độ theo Business Rules.
-
----
+Thời hạn cần hoàn thành Work Item; dùng để xác định overdue/chậm tiến độ theo Business Rules.
 
 ## 9.3. Ongoing
 
 Trạng thái nguồn xác nhận cho Work Item/công việc vận hành đang được xử lý.
 
----
-
 ## 9.4. Completed
 
 Trạng thái nguồn xác nhận cho Work Item/công việc vận hành đã hoàn thành.
 
-Không mặc định dùng `Completed` của WorkItem để diễn giải trạng thái Order hoặc Booking.
+Không dùng `Completed` của WorkItem để suy diễn trực tiếp trạng thái Order/Booking.
+
+## 9.5. Operational Milestone — Mốc vận hành
+
+Một **mốc thời gian/sự kiện nghiệp vụ có ý nghĩa theo dõi tiến độ**, khác với WorkItem.
+
+- `WorkItem` = việc cần làm, có PIC/deadline/status.
+- `OperationalMilestone` = mốc/event đã lên kế hoạch hoặc đã xảy ra, thường có planned/actual date/time, reference hoặc completion metadata.
+
+Workbook nguồn có nhiều milestone cần chuẩn hóa dần, ví dụ:
+
+### Sản xuất / batch / nhãn
+
+- Checking Batch Date;
+- Get Batch Date;
+- thông báo hoàn thành nhãn/gửi mẫu nguyên vật liệu;
+- Sending to SPP / PP / Purchase Date;
+- Raw Material Order Date;
+- Raw Material Arrival Date;
+- Production Date;
+- Finished Production Date;
+- Stick Sub-Label Date;
+- Finished Stick Sub-Label Date.
+
+### Booking / logistics
+
+- Booking Logistic Date;
+- Cut-off Date;
+- Select Container Date;
+- Loading Date;
+- ETD;
+- ATD;
+- ETA;
+- ATA.
+
+### Hải quan / chứng từ
+
+- Customs Clearance Date;
+- Customs Clearance Number;
+- Invoice Issue Date;
+- Packing List Issue Date;
+- Sending Sample Date;
+- HC Submit Date;
+- HC Issue Date;
+- CO Submit Date;
+- CO Issue Date;
+- CO Number;
+- Docs Sent;
+- Release Time.
+
+Danh sách trên **không mặc định là một enum cố định**. Tài liệu Domain Model/Workflow sẽ quyết định milestone nào là field chuyên biệt, milestone record, WorkItem completion date hoặc Document metadata.
+
+## 9.6. Customs Clearance — Khai báo/thông quan hải quan
+
+Khái niệm nghiệp vụ liên quan đến Tờ khai hải quan. Workbook nguồn theo dõi `Customs Clearance Date` và `Customs Clearance Number`.
+
+Exact workflow, status và mapping với Customs Declaration thuộc Workflow/Documents/Data Dictionary.
 
 ---
 
@@ -967,108 +636,68 @@ Không mặc định dùng `Completed` của WorkItem để diễn giải trạn
 
 Nghĩa vụ tài chính Customer phải thanh toán.
 
-```text
-Receivable
-├── AmountDue
-├── DueDate
-├── AmountPaid
-├── OutstandingBalance
-├── Status
-└── 0..N PaymentTransaction
-```
-
-Quan hệ chính xác với Order/Booking được khóa ở Domain Model/Business Rules.
-
----
+Hệ thống cần theo dõi Amount Due, Due Date, Amount Paid, Outstanding Balance và các Payment Transaction. Exact relation với Order/Booking thuộc Domain Model/Business Rules.
 
 ## 10.2. Amount Due — Số tiền phải thu
 
-Tổng số tiền Customer phải thanh toán cho Receivable trước/bao gồm các adjustment theo rule áp dụng.
-
-Công thức chính xác được định nghĩa trong Business Rules.
-
----
+Tổng số tiền phải thu của Receivable theo rule áp dụng. Công thức chính xác thuộc Business Rules.
 
 ## 10.3. Payment Transaction — Giao dịch thanh toán
 
-Một lần ghi nhận khoản tiền thực tế Customer thanh toán.
-
-```text
-Receivable
-└── 0..N PaymentTransaction
-```
-
-Hệ thống hỗ trợ partial payment/multiple transactions.
-
----
+Một lần ghi nhận khoản tiền thực tế Customer thanh toán. Hệ thống hỗ trợ partial payment/multiple transactions.
 
 ## 10.4. Payment
 
-Thuật ngữ nghiệp vụ tổng quát cho hành vi thanh toán.
-
-Chưa tạo canonical entity `Payment` trung gian riêng nếu không có thêm ý nghĩa nghiệp vụ.
-
----
+Thuật ngữ nghiệp vụ tổng quát cho hành vi thanh toán. Chưa tạo canonical entity `Payment` trung gian riêng nếu không có thêm ý nghĩa nghiệp vụ.
 
 ## 10.5. Amount Paid — Số tiền đã thanh toán
 
-Khái niệm tổng quát:
-
-```text
-AmountPaid
-= SUM(PaymentTransaction.Amount)
-```
-
----
+Tổng tiền đã ghi nhận thanh toán cho Receivable. Cách tính chính xác, refund/FX exception thuộc Business Rules.
 
 ## 10.6. Outstanding Balance — Dư nợ còn lại
 
-Khái niệm tổng quát:
-
-```text
-OutstandingBalance
-= AmountDue - AmountPaid
-```
-
-Adjustment/refund/FX exception nếu có được định nghĩa ở Business Rules.
-
----
+Phần Amount Due chưa được thanh toán. Công thức chính xác và exception thuộc Business Rules.
 
 ## 10.7. Financial Adjustment — Điều chỉnh tài chính
 
-Điều chỉnh làm thay đổi nghĩa vụ tài chính liên quan đến Order/Receivable.
+Khái niệm cho điều chỉnh ảnh hưởng giá trị tài chính của Order/Receivable.
 
-```text
-Order
-└── 0..N FinancialAdjustment
-```
+Các label nguồn đã xác nhận gồm `Debit Note` và `Credit Note`.
 
-Các loại đã xác nhận:
+### Quy tắc quan trọng
 
-- Debit Note;
-- Credit Note.
+Glossary **không tự áp dụng định nghĩa kế toán tổng quát về bên phát hành** để đảo nghĩa nguồn.
 
----
+Workbook gốc của dự án dùng convention nhập liệu:
 
-## 10.8. Debit Note — Giấy báo nợ
+- `Debit note`: **điều chỉnh trừ, ghi số âm**;
+- `Credit note`: **điều chỉnh cộng, ghi số dương**.
 
-Financial Adjustment làm tăng nghĩa vụ thanh toán của Customer theo rule nghiệp vụ.
+Đây là **source convention của dự án**, chưa phải kết luận về accounting perspective/issuer semantics. Business Rules phải xác nhận cách các adjustment này tác động Final Amount/Receivable trước khi implementation.
 
----
+## 10.8. Debit Note
 
-## 10.9. Credit Note — Giấy báo có
+Một loại Financial Adjustment theo label nguồn.
 
-Financial Adjustment làm giảm nghĩa vụ thanh toán của Customer theo rule nghiệp vụ.
+Trong workbook gốc hiện tại, Debit Note được nhập theo convention **subtractive/negative**.
 
----
+Không diễn giải thêm rằng Debit Note luôn “tăng nghĩa vụ khách hàng” nếu chưa xác nhận perspective của chứng từ.
+
+## 10.9. Credit Note
+
+Một loại Financial Adjustment theo label nguồn.
+
+Trong workbook gốc hiện tại, Credit Note được nhập theo convention **additive/positive**.
+
+Không diễn giải thêm rằng Credit Note luôn “giảm nghĩa vụ khách hàng” nếu chưa xác nhận perspective của chứng từ.
 
 ## 10.10. Cost — Chi phí làm hàng
 
 Chi phí nghiệp vụ phát sinh liên quan đến Booking/logistics/export operation.
 
-Nguồn có các nhóm như freight, handling fee, container fee, D/O fee, terminal fee, seal fee, inland trucking, packing/storage và các chi phí khác.
+Nguồn có freight, handling fee, container fee, D/O fee, terminal fee, seal fee, inland trucking, packing/storage và các chi phí khác.
 
-Taxonomy, currency, approval và aggregation được định nghĩa ở Domain/Data/Business Rules.
+Taxonomy, currency, approval và aggregation thuộc Domain/Data/Business Rules.
 
 ---
 
@@ -1078,48 +707,15 @@ Taxonomy, currency, approval và aggregation được định nghĩa ở Domain/
 
 Mục tiêu sản lượng hoặc giá trị của Customer theo kỳ.
 
-```text
-Customer
-└── 0..N KpiTarget
-    ├── Period
-    ├── TargetQuantity
-    └── TargetValue?
-```
-
----
-
 ## 11.2. Incentive Program — Chính sách thưởng
 
 Chính sách thưởng/ưu đãi của Customer theo kỳ và kết quả đạt được.
-
-```text
-Customer
-└── 0..N IncentiveProgram
-    ├── Period
-    └── 1..N IncentiveTier
-```
-
----
 
 ## 11.3. Incentive Tier — Mức thưởng
 
 Một mức/ngưỡng trong Incentive Program.
 
-Có thể chứa threshold và reward theo Business Rules.
-
-```text
-KPI Target != Incentive Program
-```
-
-KPI là mục tiêu; Incentive là chính sách thưởng.
-
----
-
-## 11.4. Market — Thị trường
-
-Khái niệm phân loại thị trường/quốc gia/khu vực của Customer phục vụ vận hành và reporting.
-
-Cấu trúc master data cụ thể được xác định trong Data Dictionary.
+`KPI Target` và `Incentive Program` là hai khái niệm khác nhau: KPI là mục tiêu; Incentive là chính sách thưởng.
 
 ---
 
@@ -1129,7 +725,7 @@ Cấu trúc master data cụ thể được xác định trong Data Dictionary.
 
 Canonical classification của chứng từ.
 
-Các loại hiện được xác nhận/chuẩn hóa gồm:
+Các loại hiện được nguồn/phiên làm rõ xác nhận hoặc chuẩn hóa gồm:
 
 - Purchase Order;
 - Quotation;
@@ -1142,132 +738,123 @@ Các loại hiện được xác nhận/chuẩn hóa gồm:
 - Customs Declaration;
 - Health Certificate.
 
-Danh sách được phép mở rộng trong quá trình xây dựng hệ thống.
-
----
+Danh sách được phép mở rộng.
 
 ## 12.2. Document Requirement — Yêu cầu chứng từ
 
 Quy định Customer yêu cầu những Document Type nào.
 
-```text
-Customer
-└── 0..N DocumentRequirement
-    └── DocumentType
-```
-
----
+Nguồn Customer có `Document require` với các loại như Invoice, Packing List, TKHQ, BL, CO, HC tàu, HC Air, HC thú y, HC y tế và loại khác.
 
 ## 12.3. Document Template — Mẫu chứng từ
 
-Template dùng để generate một Document Type.
+Template dùng để render/generate một số Document Type mà hệ thống được nghiệp vụ yêu cầu xuất theo form có sẵn.
 
-Khái niệm có thể gồm:
+Template có thể có Version, Effective From và template definition/file; chi tiết thuộc Document Design.
+
+## 12.4. Business Document — Bản ghi chứng từ nghiệp vụ
+
+Canonical umbrella concept cho **một chứng từ thực tế** được lưu/tracking trong hệ thống, bất kể nguồn của file là hệ thống generate hay người dùng upload.
+
+Khái niệm có thể mang:
 
 - Document Type;
-- Version;
-- Effective From;
-- template definition/file.
+- liên kết Order/Booking/Customer theo nghiệp vụ;
+- Document Number nếu có;
+- Issue/Received/Uploaded Date nếu có;
+- status/tracking metadata;
+- File Reference;
+- Source (`SystemGenerated` hoặc `ExternalUploaded`).
 
-Template có thể được cập nhật/thay thế mà không thay đổi core business logic.
+Exact schema thuộc Domain Model/Data Dictionary.
 
----
+## 12.5. Generated Document — Chứng từ hệ thống sinh
 
-## 12.4. Generated Document — Chứng từ đã sinh
+Business Document được hệ thống render từ dữ liệu nghiệp vụ + Document Template.
 
-Một instance chứng từ thực tế được hệ thống tạo cho Order/Booking từ một template/version cụ thể.
+**Nguồn xác nhận rõ khả năng xuất/in theo form có sẵn:**
 
-```text
-Order / Booking
-└── 0..N GeneratedDocument
-    ├── DocumentType
-    ├── TemplateVersion
-    ├── GeneratedAt
-    └── FileReference
-```
+- ở Order: PO, PI, Quotation;
+- ở Booking: IV/Commercial Invoice, Packing List, Batch Information.
 
-```text
-DocumentRequirement
-!= DocumentTemplate
-!= GeneratedDocument
-```
+Các loại trên là **ứng viên hệ thống sinh được** theo template; template/data mapping chi tiết phải được thiết kế riêng.
 
----
+## 12.6. Uploaded / External Document — Chứng từ tải lên / bên ngoài
 
-## 12.5. Quotation — Báo giá
+Business Document do người dùng upload hoặc nhận từ Carrier/cơ quan/đối tác bên ngoài; hệ thống chủ yếu lưu file, metadata và tiến độ/chứng từ liên quan.
 
-Chứng từ báo giá trước hoặc trong quá trình hình thành giao dịch theo workflow nghiệp vụ.
+**Phần lớn chứng từ xuất khẩu trong danh sách yêu cầu Customer có thể thuộc nhóm này**, ví dụ:
 
----
+- Bill of Lading;
+- Customs Declaration / TKHQ;
+- Certificate of Origin;
+- Health Certificate và các biến thể HC;
+- các certificate/chứng từ khác do bên ngoài phát hành.
 
-## 12.6. Proforma Invoice (PI) — Hóa đơn chiếu lệ
+Không mặc định hệ thống generate các chứng từ này nếu nguồn không yêu cầu.
+
+## 12.7. Quotation — Báo giá
+
+Chứng từ báo giá được nguồn yêu cầu có thể in/xuất từ Order theo form có sẵn.
+
+## 12.8. Proforma Invoice (PI) — Hóa đơn chiếu lệ
 
 Chứng từ thương mại được tạo/phát hành từ dữ liệu Order theo workflow nghiệp vụ.
 
-`PI` không phải Order và không đồng nhất với Commercial Invoice.
+`PI` không phải Order và không đồng nhất Commercial Invoice.
 
----
+## 12.9. Commercial Invoice — Hóa đơn thương mại
 
-## 12.7. Commercial Invoice — Hóa đơn thương mại
-
-Chứng từ hóa đơn thương mại thực tế dùng cho lô hàng/Booking theo nghiệp vụ xuất khẩu.
+Chứng từ hóa đơn thương mại dùng cho lô hàng/Booking.
 
 `IV` trong tài liệu nguồn được chuẩn hóa là alias/abbreviation của `CommercialInvoice`, không tạo Document Type `IV` riêng.
 
----
+Nguồn Booking yêu cầu có thể in/xuất IV theo form có sẵn.
 
-## 12.8. Packing List (PL) — Phiếu đóng gói
+## 12.10. Packing List (PL) — Phiếu đóng gói
 
-Chứng từ mô tả chi tiết hàng thực tế của Booking như Product, quantity, packaging, weight, volume và thông tin đóng gói liên quan.
+Chứng từ mô tả chi tiết hàng thực tế của Booking như Product, quantity, packaging, weight, volume và thông tin đóng gói.
 
-Hệ thống có thể generate PL.
+Nguồn Booking yêu cầu có thể in/xuất PL theo form có sẵn.
 
----
-
-## 12.9. Batch Information
+## 12.11. Batch Information
 
 Chứng từ thể hiện thông tin Batch/Batch Allocation của hàng trong Booking.
 
-Nguồn dữ liệu khái niệm:
+Nguồn Booking yêu cầu có thể in/xuất Batch Information theo form có sẵn.
 
-```text
-Booking
-└── BookingLine
-    └── BatchAllocation
-        └── Batch
-```
+## 12.12. Bill of Lading (BL)
 
-Hệ thống có thể generate Batch Information.
+External logistics document/reference. Trong scope nguồn hiện tại hệ thống lưu/tracking/upload BL; không có yêu cầu hệ thống phát hành BL.
 
----
+## 12.13. Certificate of Origin (CO) — Chứng nhận xuất xứ
 
-## 12.10. Certificate of Origin (CO) — Chứng nhận xuất xứ
+`CO` là canonical abbreviation cho Certificate of Origin.
 
-Canonical document term cho `CO`.
+Nguồn vận hành theo dõi CO Submit Date, CO Issue Date và CO No. Vì vậy CO phù hợp với mô hình Uploaded/External Document + Operational Milestone, trừ khi nghiệp vụ sau này yêu cầu integration/generation cụ thể.
 
-CO có thể là Document Requirement của Customer và có thể được lưu/tracking trong hệ thống.
+## 12.14. Customs Declaration (TKHQ) — Tờ khai hải quan
 
-Việc hệ thống generate hay chỉ lưu external document được xác định theo từng workflow/document type.
+`TKHQ` được xác nhận là **Tờ khai hải quan**; canonical English term là `CustomsDeclaration`.
 
----
+Nguồn vận hành theo dõi Customs Clearance Date/Number. Đây chủ yếu là external/uploaded document/reference trong scope hiện tại.
 
-## 12.11. Customs Declaration (TKHQ) — Tờ khai hải quan
+## 12.15. Health Certificate (HC)
 
-`TKHQ` được xác nhận là **Tờ khai hải quan**.
+Canonical mapping hiện tại cho `HC` là Health Certificate.
 
-Canonical English term trong glossary:
+Workbook nguồn cho thấy Document Requirement có nhiều biến thể: HC tàu, HC Air, HC thú y, HC y tế. Vì vậy `HealthCertificate` là umbrella term; subtype/taxonomy cụ thể được bổ sung ở Data Dictionary/Documents khi nghiệp vụ khóa.
 
-```text
-CustomsDeclaration
-```
+Nguồn vận hành theo dõi HC Submit Date và HC Issue Date; không mặc định hệ thống là đơn vị phát hành HC.
 
----
+## 12.16. Document Source
 
-## 12.12. Health Certificate (HC)
+Phân loại nguồn của Business Document:
 
-Canonical mapping hiện tại cho `HC` trong danh sách chứng từ yêu cầu.
+- `SystemGenerated`: hệ thống render từ template + dữ liệu;
+- `ExternalUploaded`: file/chứng từ được nhận từ bên ngoài hoặc người dùng upload.
 
-Nếu nghiệp vụ sau này xác nhận HC có nghĩa khác hoặc cần phân loại certificate chi tiết hơn, glossary được cập nhật tương ứng.
+Có thể bổ sung source khác sau nếu integration phát sinh; integration nghiệp vụ ngoài SSO hiện thuộc Future Scope.
 
 ---
 
@@ -1275,41 +862,23 @@ Nếu nghiệp vụ sau này xác nhận HC có nghĩa khác hoặc cần phân 
 
 ## 13.1. Role
 
-Nhóm quyền/authorization role được gán cho User theo security model.
-
-Role không đồng nhất với business organization như Customer/Warehouse.
-
----
+Nhóm quyền/authorization role được gán cho User theo security model; không đồng nhất business organization như Customer/Warehouse.
 
 ## 13.2. Permission
 
-Quyền cho phép thực hiện action trên resource/data scope cụ thể.
-
-Permission model chi tiết được định nghĩa trong Role & Permission Matrix.
-
----
+Quyền cho phép thực hiện action trên resource/data scope cụ thể. Permission model chi tiết thuộc Role & Permission Matrix.
 
 ## 13.3. Master Data
 
-Dữ liệu tham chiếu dùng chung được quản trị có kiểm soát, ví dụ các danh mục location, transport mode, equipment type hoặc business taxonomy tùy thiết kế cuối cùng.
-
----
+Dữ liệu tham chiếu dùng chung được quản trị có kiểm soát, ví dụ location, transport mode, equipment type, Region hoặc business taxonomy tùy thiết kế cuối cùng.
 
 ## 13.4. Audit Log
 
-Bản ghi lịch sử ai đã thay đổi dữ liệu nào, khi nào và nội dung thay đổi theo mức độ được định nghĩa trong Audit Design.
-
----
+Bản ghi lịch sử ai đã thay đổi dữ liệu nào, khi nào và nội dung thay đổi theo Audit Design.
 
 ## 13.5. Notification
 
-Thông báo nội bộ trong hệ thống về sự kiện cần chú ý như:
-
-- contract expiring soon;
-- payment due soon;
-- payment overdue;
-- Work Item overdue;
-- business events khác.
+Thông báo nội bộ về event cần chú ý như contract expiring soon, payment due soon/overdue, WorkItem overdue và business events khác.
 
 Email/SMS/push external channels không thuộc scope hiện tại.
 
@@ -1317,85 +886,90 @@ Email/SMS/push external channels không thuộc scope hiện tại.
 
 # 14. Canonical Relationship Summary
 
+Phần này chỉ tóm tắt các quan hệ ngữ nghĩa quan trọng đã được chốt; exact schema/cardinality khác thuộc Domain Model.
+
 ```text
 Customer
-├── 1 CustomerAccount
-├── 0..N Contract
-├── 0..N KpiTarget
-├── 0..N IncentiveProgram
-├── 0..N DocumentRequirement
-└── 0..N Order
+├── CustomerAccount                // 1:1 theo Project Scope
+├── Contract(s)
+├── KpiTarget(s)
+├── IncentiveProgram(s)
+├── DocumentRequirement(s)
+└── Order(s)
 
 Product
-├── 0..N ProductPrice
-└── 0..N Batch
+├── ProductPrice history
+└── Batch(s)
 
 Order
-├── 1..N OrderLine
-├── 0..N FinancialAdjustment
-└── 0..N Booking
+├── OrderLine(s)
+└── Booking(s)                     // Order 1:N Booking đã chốt
 
 OrderLine
-└── 0..N BookingLine
+└── BookingLine allocation(s)
 
 Booking
-├── 1 Warehouse
-├── 1..N BookingLine
-├── 0..N TransportEquipment
-├── 0..N WorkItem
+├── one primary Warehouse          // đã chốt
+├── BookingLine(s)
+├── TransportEquipment(s)
+├── WorkItem(s)
+├── OperationalMilestone(s)
 ├── LoadingSchedule
 ├── DeliverySchedule
 ├── BookingCode
 ├── CarrierBookingNumber?
 ├── ShippingOrderNumber?
-├── ShippingOrderDate?
 └── BillOfLadingNumber?
 
 BookingLine
-└── 0..N BatchAllocation
-
-BatchAllocation
-└── 1 Batch
+└── BatchAllocation(s)
 
 Receivable
-└── 0..N PaymentTransaction
-```
+└── PaymentTransaction(s)
 
-Cardinality chính xác cho các relation chưa được Project Scope/Glossary khóa sẽ được xác định trong Domain Model.
+BusinessDocument
+├── GeneratedDocument
+└── Uploaded/ExternalDocument
+```
 
 ---
 
-# 15. Abbreviation Reference
+# 15. Abbreviation & Source Mapping Reference
 
-| Abbreviation | Canonical meaning | Ghi chú |
+| Source term / abbreviation | Canonical meaning | Ghi chú |
 |---|---|---|
 | KDQT | Kinh Doanh Quốc Tế | Tên phòng nghiệp vụ |
-| PO | Purchase Order | Phân biệt Customer PO reference với internal Order Number |
-| PI | Proforma Invoice | Không phải Commercial Invoice |
-| IV | Commercial Invoice | Alias/abbreviation từ tài liệu nguồn |
-| PL | Packing List | Chứng từ hệ thống có thể generate |
-| SO | Shipping Order | Mapping được xác nhận theo ngữ cảnh nghiệp vụ dự án |
-| BL | Bill of Lading | External logistics document/reference |
-| CO | Certificate of Origin | Chứng nhận xuất xứ |
+| `Số PO` tự sinh | `OrderNumber` | Không dùng làm CustomerPoNumber |
+| PO | Purchase Order | Document/Customer PO theo ngữ cảnh; không phải entity song song với Order |
+| Customer PO | `CustomerPoNumber` | External reference nếu có |
+| PI | Proforma Invoice | Khác Commercial Invoice |
+| IV | Commercial Invoice | Alias từ tài liệu nguồn |
+| PL | Packing List | Có thể system-generate theo form nguồn |
+| SO | Shipping Order — working interpretation | Nguồn chỉ ghi `Số SO`; cần cập nhật nếu nghiệp vụ xác nhận nghĩa khác |
+| BL | Bill of Lading | External/uploaded document/reference |
+| CO | Certificate of Origin | External/uploaded/tracked |
 | TKHQ | Tờ khai hải quan / Customs Declaration | Được nghiệp vụ xác nhận |
-| HC | Health Certificate | Mapping hiện tại; có thể cập nhật nếu nghiệp vụ xác nhận khác |
-| PIC | Person In Charge | Người chịu trách nhiệm chính cho WorkItem |
-| ETD | Estimated Time of Departure | Không phải ngày đóng hàng |
-| ETA | Estimated Time of Arrival | Thời điểm dự kiến đến |
-| POL | Port of Loading | Sea/UI alias của Origin Location |
-| POD | Port of Discharge | Sea/UI alias của Destination Location |
+| HC | Health Certificate | Umbrella term; nguồn có nhiều HC subtype |
+| PIC | Person In Charge | Primary owner của WorkItem |
+| ETD | Estimated Time of Departure | Khác Loading Date |
+| ATD | Actual Time of Departure | Actual departure milestone |
+| ETA | Estimated Time of Arrival | Estimated arrival |
+| ATA | Actual Time of Arrival | Actual arrival milestone |
+| POL | Port of Loading | Sea alias của Origin Location |
+| POD | Port of Discharge | Sea alias của Destination Location |
 | FOC | Free of Charge | Hàng/số lượng miễn phí |
 | FCL | Full Container Load | Shipment Load Type |
 | LCL | Less than Container Load | Shipment Load Type, không phải Equipment Type |
-| EXW | Ex Works | Incoterm theo dữ liệu nguồn |
-| FOB | Free On Board | Incoterm theo dữ liệu nguồn |
-| DAT | Delivered At Terminal | Giữ nguyên theo dữ liệu nguồn cho đến khi nghiệp vụ thay đổi |
+| EXW | Ex Works | Incoterm theo nguồn |
+| FOB | Free On Board | Incoterm theo nguồn |
+| DAT | Delivered At Terminal | Giữ nguyên theo nguồn đến khi nghiệp vụ thay đổi |
+| REGION | Region | Nguồn Bắc/Nam; khác Market |
 
 ---
 
 # 16. Terms intentionally not locked yet
 
-Các khái niệm dưới đây có thể được bổ sung hoặc chi tiết hóa trong tài liệu sau mà không cần xem là thiếu sót của glossary hiện tại:
+Các khái niệm dưới đây có thể được bổ sung/chi tiết hóa trong tài liệu sau:
 
 - exact Order lifecycle states;
 - exact Booking state machine/transitions;
@@ -1403,17 +977,21 @@ Các khái niệm dưới đây có thể được bổ sung hoặc chi tiết h
 - Forwarder model;
 - Receivable-to-Order/Booking cardinality;
 - Payment reference/bank reconciliation fields;
+- exact Debit/Credit Note accounting perspective và effect on Final Amount/Receivable;
 - detailed cost taxonomy;
 - exact warehouse/loading status model;
 - Product Batch unique rules;
 - exact KPI calculation rules;
 - detailed Incentive calculation;
-- certificate/document sub-types;
+- Health Certificate subtype taxonomy;
+- document status/version/approval workflow;
 - location hierarchy;
+- Region taxonomy ngoài Bắc/Nam nếu phát sinh;
 - master-data ownership;
+- milestone storage model;
 - additional export/logistics abbreviations phát sinh từ nghiệp vụ thực tế.
 
-Khi một thuật ngữ mới xuất hiện trong Domain Model, Workflow, Data Dictionary hoặc API mà có khả năng gây hiểu khác nhau, thuật ngữ đó phải được bổ sung trở lại tài liệu này.
+Khi thuật ngữ mới xuất hiện trong Domain Model, Workflow, Data Dictionary hoặc API mà có khả năng gây hiểu khác nhau, thuật ngữ đó phải được bổ sung trở lại glossary.
 
 ---
 
@@ -1425,7 +1003,7 @@ Khi một thuật ngữ mới xuất hiện trong Domain Model, Workflow, Data D
 | GLOSSARY-02 | Booking là đơn vị vận chuyển chính; không có Shipment entity riêng |
 | GLOSSARY-03 | Một OrderLine có thể được chia qua nhiều BookingLine |
 | GLOSSARY-04 | Batch được phân bổ ở cấp BookingLine; hỗ trợ nhiều Batch |
-| GLOSSARY-05 | SO được hiểu là Shipping Order |
+| GLOSSARY-05 | SO được hiểu theo working interpretation là Shipping Order |
 | GLOSSARY-06 | Tách BookingCode, CarrierBookingNumber, ShippingOrderNumber và BillOfLadingNumber |
 | GLOSSARY-07 | Carrier là canonical term; Shipping Line là Sea Carrier; Forwarder chưa bắt buộc |
 | GLOSSARY-08 | Tách TransportMode, ShipmentLoadType và EquipmentType |
@@ -1434,32 +1012,39 @@ Khi một thuật ngữ mới xuất hiện trong Domain Model, Workflow, Data D
 | GLOSSARY-11 | LoadingSchedule và DeliverySchedule là hai concept riêng |
 | GLOSSARY-12 | ETD/ETA chuẩn logistics, tách khỏi loading/release dates |
 | GLOSSARY-13 | Một Booking có thể có nhiều TransportEquipment/container |
-| GLOSSARY-14 | Batch là entity traceability theo Product; BatchAllocation nối Batch với BookingLine |
+| GLOSSARY-14 | Batch là traceability concept theo Product; BatchAllocation nối Batch với BookingLine |
 | GLOSSARY-15 | Product tương ứng SKU/mã hàng; ProductionCode là business identifier chính |
-| GLOSSARY-16 | ProductPrice là concept riêng có effective period/history |
-| GLOSSARY-17 | ProductPrice là base price; giá thực tế snapshot trên OrderLine; chưa có CustomerProductPrice riêng |
+| GLOSSARY-16 | ProductPrice là concept có effective period/history |
+| GLOSSARY-17 | ProductPrice là base price; giá thực tế giữ ở OrderLine; chưa có CustomerProductPrice riêng |
 | GLOSSARY-18 | Tách Customer, CustomerAccount và User |
 | GLOSSARY-19 | Tách Warehouse, WarehouseAccount và User |
-| GLOSSARY-20 | Incoterm là canonical term; Customer có default và Order snapshot riêng |
+| GLOSSARY-20 | Incoterm là canonical term; Customer có default và Order giữ giá trị áp dụng riêng |
 | GLOSSARY-21 | PaymentTerm là rule; DueDate là ngày cụ thể của Receivable |
-| GLOSSARY-22 | Receivable có 0..N PaymentTransaction; Payment chưa cần entity trung gian riêng |
-| GLOSSARY-23 | Debit Note/Credit Note là các FinancialAdjustment độc lập, có thể phát sinh nhiều lần |
+| GLOSSARY-22 | Receivable hỗ trợ nhiều PaymentTransaction; Payment chưa cần entity trung gian riêng |
+| GLOSSARY-23 | Debit Note/Credit Note là FinancialAdjustment; source convention hiện là Debit âm/trừ, Credit dương/cộng; accounting perspective để Business Rules khóa |
 | GLOSSARY-24 | Tách KpiTarget và IncentiveProgram |
-| GLOSSARY-25 | Customer 1:N Contract; ExpiringSoon là derived alert |
-| GLOSSARY-26 | WorkItem là canonical term; mỗi WorkItem có một primary PIC ở cấp glossary |
-| GLOSSARY-27 | Tách DocumentRequirement, DocumentTemplate và GeneratedDocument |
-| GLOSSARY-28 | Tách Quotation, ProformaInvoice và CommercialInvoice; IV là alias của CommercialInvoice |
-| GLOSSARY-29 | PL/BatchInformation có thể generate; BL là external document/reference trong scope hiện tại |
-| GLOSSARY-30 | CO = Certificate of Origin; TKHQ = Tờ khai hải quan/Customs Declaration; HC = Health Certificate; glossary được phép bổ sung thuật ngữ trong quá trình xây dựng |
+| GLOSSARY-25 | Customer có nhiều Contract theo thời gian; ExpiringSoon là derived alert |
+| GLOSSARY-26 | WorkItem là canonical term; có primary PIC ở cấp glossary |
+| GLOSSARY-27 | Tách DocumentRequirement, DocumentTemplate và document instance |
+| GLOSSARY-28 | Tách Quotation, ProformaInvoice và CommercialInvoice; IV là alias CommercialInvoice |
+| GLOSSARY-29 | PO/PI/Quotation và IV/PL/BatchInformation là các loại nguồn yêu cầu có thể render; BL là external document/reference |
+| GLOSSARY-30 | CO = Certificate of Origin; TKHQ = Customs Declaration; HC = Health Certificate umbrella; glossary được bổ sung dần |
+| GLOSSARY-31 | `BusinessDocument` là umbrella cho chứng từ thực tế; phân biệt `SystemGenerated` và `ExternalUploaded` |
+| GLOSSARY-32 | Tách `Market` khỏi `Region`; nguồn Region hiện dùng Bắc/Nam cho Finance routing |
+| GLOSSARY-33 | Bổ sung `OperationalMilestone` để chuẩn hóa các mốc VẬN HÀNH trong workbook |
+| GLOSSARY-34 | SO giữ là working interpretation `Shipping Order`, không tuyên bố tài liệu nguồn đã định nghĩa chính thức |
 
 ---
 
 # 18. Governance
 
 1. Tài liệu này là nguồn canonical cho terminology của dự án.
-2. Khi tài liệu downstream dùng một thuật ngữ khác cho cùng concept, ưu tiên canonical term trong glossary hoặc cập nhật glossary bằng quyết định có chủ đích.
+2. Khi tài liệu downstream dùng thuật ngữ khác cho cùng concept, ưu tiên canonical term trong glossary hoặc cập nhật glossary bằng quyết định có chủ đích.
 3. Không tạo entity/class/API resource mới chỉ vì có một alias nghiệp vụ khác.
 4. Không tự thay nghĩa thuật ngữ nguồn khi chưa có bằng chứng hoặc xác nhận nghiệp vụ.
-5. Các thuật ngữ có thể được bổ sung khi xây dựng hệ thống; thay đổi làm ảnh hưởng scope phải quay lại `00-project-scope.md`.
-6. Các thay đổi làm ảnh hưởng state transition phải được phản ánh trong workflow/state-machine document.
-7. Các thay đổi làm ảnh hưởng schema/identifier/validation phải được phản ánh trong Domain Model/Data Dictionary.
+5. Phải phân biệt rõ **source fact**, **business clarification** và **working interpretation**.
+6. Các thuật ngữ có thể được bổ sung khi xây dựng hệ thống; thay đổi ảnh hưởng Project Scope phải quay lại `00-project-scope.md`.
+7. Thay đổi ảnh hưởng state transition phải được phản ánh trong workflow/state-machine document.
+8. Thay đổi ảnh hưởng schema/identifier/validation phải được phản ánh trong Domain Model/Data Dictionary.
+9. Công thức và accounting/business calculation phải được khóa trong Business Rules, không coi ví dụ trong glossary là nguồn triển khai cuối cùng.
+10. Với chứng từ, mặc định phân biệt `DocumentRequirement`, `DocumentTemplate`, `BusinessDocument`, `GeneratedDocument` và `Uploaded/ExternalDocument`; không giả định mọi Document Type đều do hệ thống generate.
